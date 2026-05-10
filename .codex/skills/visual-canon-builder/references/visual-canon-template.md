@@ -7,6 +7,7 @@ Use these templates when `$visual-canon-builder` needs a fuller reusable structu
 - Character Canon Ontology
 - Faction Or World Canon Ontology
 - Semantic Relations And Provenance
+- Interactive Clarification Loop
 - Projection Rules Template
 - Validation Shapes
 - Handoff Status Rules
@@ -91,6 +92,29 @@ canon_assertions:
     asserted_by: visual-canon-builder
     derived_from: <analysis id or question id>
     needs_confirmation: <true | false>
+
+clarification_gate:
+  status: <none | waiting_for_user | resolved>
+  reason: <why answers are needed or none>
+
+question_queue:
+  - id: <Q_001>
+    question: <canon-critical user question>
+    type: <canon_source_approval | variant_or_drift | exact_text | prop_permanence | measurement_source | forbidden_rule>
+    blocking: <true | false>
+    affects:
+      - <field or assertion id>
+    required_for:
+      - <ready_handoff | confirmed_constraints | proportion_lock>
+    default_if_unanswered: <keep_provisional | keep_unresolved | block_ready_handoff>
+
+user_answers:
+  - id: <UA_001>
+    answers_question: <Q_001>
+    value: <user answer>
+    asserted_by: user
+    confidence: user_confirmed
+    recorded_in_turn: current_conversation
 
 proportion_model:
   units: height_units
@@ -375,6 +399,44 @@ semantic_mapping:
   relation: relations subject-predicate-object records
   constraint: validation_shapes
   provenance: canon_assertions source/confidence fields
+```
+
+## Interactive Clarification Loop
+
+Use this when canon-critical decisions require user input before a ready handoff.
+
+```yaml
+clarification_gate:
+  status: waiting_for_user
+  reason: blocking_questions_prevent_ready_handoff
+
+question_queue:
+  - id: Q_001
+    question: Which image is the approved canon source?
+    type: canon_source_approval
+    blocking: true
+    affects:
+      - canon_assertions.*.source_role
+      - Confirmed constraints
+    required_for:
+      - ready_handoff
+    default_if_unanswered: keep_provisional
+
+user_answers:
+  - id: UA_001
+    answers_question: Q_001
+    value: Image_001 is approved canon
+    asserted_by: user
+    confidence: user_confirmed
+    recorded_in_turn: current_conversation
+
+relations:
+  - subject: UA_001
+    predicate: answersQuestion
+    object: Q_001
+  - subject: ASSERT_001
+    predicate: wasDerivedFrom
+    object: UA_001
 ```
 
 ## Projection Rules Template

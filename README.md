@@ -20,8 +20,9 @@ It does not generate images directly. It prepares:
 │   └── openai.yaml
 └── references/
     ├── image-analysis-to-canon.md
+    ├── interactive-clarification-loop.md
     ├── semantic-canon-model.md
-    ├── v3.1-goals-and-manual-tests.md
+    ├── v3.2-goals-and-manual-tests.md
     └── visual-canon-template.md
 ```
 
@@ -105,7 +106,9 @@ The skill is designed to produce:
 - `Image Inventory`
 - `Observed Visual Facts`
 - `Conflicts And Unknowns`
-- `Clarifying Questions`
+- `Question Queue`
+- `Clarification Gate`
+- `User Answer Provenance`
 - `Visual Canon Ontology`
 - `Semantic Relations And Provenance`
 - `Validation Shapes`
@@ -120,4 +123,5 @@ Unconfirmed image-derived facts stay in `needs_confirmation`, `Provisional const
 - This is a lightweight ontology-inspired skill, not a full RDF/OWL/SHACL engine.
 - The skill delegates actual image generation to `$imagegen`.
 - The proportion projection model is an approximate orthographic envelope estimate, not a full 3D reconstruction.
-- `references/v3.1-goals-and-manual-tests.md` records the current hardening goals and a Byuli character-sheet manual golden test.
+- Blocking canon questions are handled through `question_queue` and `user_answers` before ready handoff.
+- `references/v3.2-goals-and-manual-tests.md` records the current hardening goals and a Byuli character-sheet manual golden test.

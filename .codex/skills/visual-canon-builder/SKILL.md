@@ -30,12 +30,12 @@ This is a lightweight ontology-inspired skill, not a full RDF/OWL/SHACL implemen
    - `validation_shapes`: SHACL-like rules with target, path, constraint, severity, and message.
    - `imagegen_execution`: downstream `$imagegen` mode, input roles, output requirements, and handoff status.
 4. Separate observed facts from inference. Mark hidden, ambiguous, or conflicting details as `needs_confirmation` instead of inventing them.
-5. Ask only canon-critical clarification questions: which image is canon, which differences are intended variants, and which details are forbidden drift.
+5. Ask only canon-critical clarification questions through the Interactive Clarification Loop: create a `question_queue` with stable IDs, mark each question `blocking` or `non_blocking`, and stop for user input when blocking questions prevent a ready handoff.
 6. Write a compact visual ontology with English keys and Korean-friendly values/examples.
 7. Compile one or more `$imagegen` prompt packs using the schema below. Put only confirmed canon assertions in `Confirmed constraints`; keep uncertain, inferred, role-ambiguous, or source-ambiguous facts in `Provisional constraints` or `Unresolved questions`.
 8. Add a validation checklist and canon promotion rule so generated images do not become canon automatically.
 
-For fuller copy/paste templates, read `references/visual-canon-template.md`. For image-to-canon analysis, read `references/image-analysis-to-canon.md`. For semantic mapping, assertion provenance, and shape rules, read `references/semantic-canon-model.md`. For regression goals and manual sample tests, read `references/v3.1-goals-and-manual-tests.md`.
+For fuller copy/paste templates, read `references/visual-canon-template.md`. For image-to-canon analysis, read `references/image-analysis-to-canon.md`. For semantic mapping, assertion provenance, and shape rules, read `references/semantic-canon-model.md`. For question/answer loops, read `references/interactive-clarification-loop.md`. For regression goals and manual sample tests, read `references/v3.2-goals-and-manual-tests.md`.
 
 ## Image Analysis To Canon
 
@@ -51,6 +51,12 @@ When one or more images are provided, use this pipeline before ontology writing:
 Do not treat a stylized or perspective-distorted image as a measurement source unless the user confirms it is a reference sheet. Strong perspective images should become `scene-specific perspective` references, not canon measurement sources.
 
 Image roles gate canon promotion. Repetition alone is not enough: repeated details in two `style reference` images must not outrank a single declared `canon candidate`. If image roles conflict or are unknown, keep the affected facts out of `immutable` and ask.
+
+## Interactive Clarification Loop
+
+When questions are needed, do not only list them. Emit a `question_queue` with up to 5 stable IDs, `blocking` status, affected fields, and `default_if_unanswered`. If any blocking question prevents `ready`, set `clarification_gate: waiting_for_user`, ask those questions in chat, and stop before final `$imagegen` handoff.
+
+When the user answers, create `user_answers` provenance records, link them to affected `canon_assertions`, recompute `canon_status`, `Handoff status`, `Confirmed constraints`, `Provisional constraints`, and `Unresolved questions`, then return the updated ontology and prompt pack.
 
 ## Confirmation And Handoff Gates
 
@@ -467,12 +473,13 @@ Return these sections unless the user asks for a narrower artifact:
 1. `Image Inventory` when images are provided
 2. `Observed Visual Facts` when images are provided
 3. `Conflicts And Unknowns` when anything is hidden, contradictory, or uncertain
-4. `Clarifying Questions` when canon-critical decisions are blocked
-5. `Visual Canon Ontology`
-6. `Semantic Relations And Provenance`
-7. `Validation Shapes`
-8. `$imagegen Prompt Pack`
-9. `Validation Checklist`
-10. `Canon Promotion Notes`
+4. `Question Queue` and `Clarification Gate` when canon-critical decisions need input
+5. `User Answer Provenance` when applying user replies
+6. `Visual Canon Ontology`
+7. `Semantic Relations And Provenance`
+8. `Validation Shapes`
+9. `$imagegen Prompt Pack`
+10. `Validation Checklist`
+11. `Canon Promotion Notes`
 
 Keep outputs concise enough to be pasted into `$imagegen`, but include all immutable and forbidden rules needed to prevent visual drift.

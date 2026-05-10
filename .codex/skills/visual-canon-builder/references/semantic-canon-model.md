@@ -62,6 +62,8 @@ approves
 rejects
 forbids
 requiresConfirmation
+answersQuestion
+wasAnsweredBy
 ```
 
 ## Canon Assertions
@@ -81,6 +83,42 @@ canon_assertions:
     asserted_by: visual-canon-builder
     derived_from: image_analysis_001
     needs_confirmation: false
+```
+
+## User Answer Provenance
+
+Treat user replies as provenance records, not loose notes:
+
+```yaml
+question_queue:
+  - id: Q_001
+    question: Which image is the approved canon source?
+    type: canon_source_approval
+    blocking: true
+    affects:
+      - canon_assertions.*.source_role
+      - Confirmed constraints
+    default_if_unanswered: keep_provisional
+
+user_answers:
+  - id: UA_001
+    answers_question: Q_001
+    value: Image_001 is approved canon
+    asserted_by: user
+    confidence: user_confirmed
+    recorded_in_turn: current_conversation
+```
+
+Link answers into the graph:
+
+```yaml
+relations:
+  - subject: UA_001
+    predicate: answersQuestion
+    object: Q_001
+  - subject: ASSERT_001
+    predicate: wasDerivedFrom
+    object: UA_001
 ```
 
 Confidence values:

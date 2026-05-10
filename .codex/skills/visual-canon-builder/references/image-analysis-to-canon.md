@@ -13,6 +13,7 @@ Use this reference when `$visual-canon-builder` receives one or more images and 
 - Proportion Extraction
 - View Projection
 - Clarifying Questions
+- User Answer Application
 - `$imagegen` Handoff
 - Canon Assertion Provenance
 
@@ -313,6 +314,48 @@ Ask only questions that change the canon:
 ```
 
 If the user does not answer and work must continue, mark the field as `needs_confirmation` and keep it out of `immutable`.
+
+Use `question_queue` instead of bare questions when answers affect canon state:
+
+```yaml
+clarification_gate:
+  status: waiting_for_user
+  reason: canon_candidate_not_yet_approved
+
+question_queue:
+  - id: Q_Byuli_001
+    question: Image_Byuli_001을 approved canon source로 승격할까요?
+    type: canon_source_approval
+    blocking: true
+    affects:
+      - canon_assertions.*.source_role
+      - canon_assertions.*.canon_status
+      - Confirmed constraints
+      - Handoff status
+    default_if_unanswered: keep_provisional
+```
+
+If a blocking question prevents a ready handoff, ask the queue in chat and stop. Continue only after the user answers or explicitly accepts a provisional handoff.
+
+## User Answer Application
+
+When the user replies, convert the answer into provenance before recomputing the prompt pack:
+
+```yaml
+user_answers:
+  - id: UA_Byuli_001
+    answers_question: Q_Byuli_001
+    value: keep_as_candidate
+    asserted_by: user
+    confidence: user_confirmed
+    recorded_in_turn: current_conversation
+```
+
+Then update affected assertions and handoff fields:
+- `approve_as_canon` promotes matching observed assertions to `canon_status: confirmed`.
+- `keep_as_candidate` leaves matching observed assertions in `Provisional constraints`.
+- `reference_only` keeps the image out of `immutable` and hard `$imagegen` constraints.
+- `exact_text_required` may populate `Text (verbatim)` and `Confirmed constraints`.
 
 ## `$imagegen` Handoff
 
