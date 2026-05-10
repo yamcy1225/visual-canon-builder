@@ -9,6 +9,7 @@ Use these templates when `$visual-canon-builder` needs a fuller reusable structu
 - Semantic Relations And Provenance
 - Projection Rules Template
 - Validation Shapes
+- Handoff Status Rules
 - `$imagegen` Prompt Pack
 - Cutout / Transparent-Background Prompt Add-On
 - Validation Checklist
@@ -84,8 +85,9 @@ canon_assertions:
     predicate: <property or relation>
     object: <value>
     source_image_id: <Image id or user_answer id>
-    source_role: <canon candidate | variant | style reference | user confirmation>
-    confidence: <observed | inferred | low_confidence | needs_confirmation>
+    source_role: <approved canon source | canon candidate | reference image | variant | style reference | user confirmation>
+    confidence: <observed | inferred | low_confidence | needs_confirmation | user_confirmed>
+    canon_status: <confirmed | provisional | unresolved | rejected>
     asserted_by: visual-canon-builder
     derived_from: <analysis id or question id>
     needs_confirmation: <true | false>
@@ -103,6 +105,18 @@ proportion_model:
     tolerance:
       strict_identity_sheet: 3_percent
       dynamic_scene: 8_percent
+    calibration_status: <uncalibrated | calibrated>
+    tolerance_applies: <true | false>
+    calibration_evidence:
+      pixel_crop: <none | crop coordinates or description>
+      normalized_landmarks: <none | landmark list>
+      measured_by: <agent | user | script | unknown>
+    tolerance_valid_when:
+      - calibrated_reference_sheet
+      - pixel_normalized_landmarks
+      - full_body_uncropped
+      - camera_low_distortion_or_orthographic
+    fallback_when_uncalibrated: use_descriptive_or_low_confidence_proportions
     do_not_measure_from:
       - wide_angle_perspective
       - foreshortened_action_pose
@@ -111,23 +125,22 @@ proportion_model:
   anatomical_proportion:
     full_height: 1000
     head_height: <observed or needs_confirmation>
+    head_width_front: <observed or needs_confirmation>
+    head_depth_side: <observed or needs_confirmation>
     arm_length: <observed or needs_confirmation>
     leg_length: <observed or needs_confirmation>
   costume_silhouette_envelope:
     shoulder_width_front: <observed or needs_confirmation>
+    shoulder_depth_side: <observed or needs_confirmation>
     torso_width_front: <observed or needs_confirmation>
+    torso_depth_side: <observed or needs_confirmation>
     hip_width_front: <observed or needs_confirmation>
+    hip_depth_side: <observed or needs_confirmation>
     body_depth_side: <observed or needs_confirmation>
-  full_height: 1000
-  head_height: <observed or needs_confirmation>
-  head_width_front: <observed or needs_confirmation>
-  shoulder_width_front: <observed or needs_confirmation>
-  torso_width_front: <observed or needs_confirmation>
-  hip_width_front: <observed or needs_confirmation>
-  body_depth_side: <observed or needs_confirmation>
-  head_depth_side: <observed or needs_confirmation>
-  arm_length: <observed or needs_confirmation>
-  leg_length: <observed or needs_confirmation>
+    costume_or_shell_depth_side: <observed or needs_confirmation>
+  accessory_envelope:
+    weapon_width_or_reach: <observed or not_applicable>
+    prop_extension: <observed or not_applicable>
   confidence:
     front_widths: <observed | inferred | needs_confirmation>
     side_depths: <observed | inferred | needs_confirmation>
@@ -135,8 +148,18 @@ proportion_model:
 
 projection_rules:
   formula_type: orthographic_envelope_estimate
-  width_formula: projected_width = abs(front_width * cos(yaw)) + abs(side_depth * sin(yaw))
+  width_formula_per_landmark: projected_width = abs(front_width * cos(yaw)) + abs(side_depth * sin(yaw))
   yaw_units: degrees
+  compute_per_landmark:
+    - head
+    - shoulder
+    - torso
+    - hip
+    - costume_envelope
+  do_not_collapse_to_single_width: true
+  yaw_direction_convention:
+    positive_yaw_reveals: subject_right
+    negative_yaw_reveals: subject_left
   default_reference_camera: orthographic
   valid_when:
     - yaw_only_turnaround
@@ -157,12 +180,20 @@ projection_rules:
 view_spec:
   view_type: <front | side | back | three_quarter | custom>
   yaw: <0 | 45 | 90 | custom degrees>
+  yaw_direction: <positive_reveals_subject_right | positive_reveals_subject_left | none>
+  visible_side: <subject_left | subject_right | centered | back>
   pitch: 0
   roll: 0
   camera_mode: <orthographic | low-distortion perspective>
   fixed_canvas_height: 1000
-  derived_projected_width: <calculated or needs_confirmation>
+  derived_projected_widths:
+    head: <calculated or needs_confirmation>
+    shoulder: <calculated or needs_confirmation>
+    torso: <calculated or needs_confirmation>
+    hip: <calculated or needs_confirmation>
+    costume_envelope: <calculated or needs_confirmation>
   numeric_width_check: <valid | invalid | low_confidence | needs_confirmation>
+  asymmetry_validation_required: <true | false>
 
 immutable:
   - <must-never-change visual rule>
@@ -200,7 +231,7 @@ validation_shapes:
   - target: <entity id>
     path: <property path>
     constraint: <equals / min_count / max_count / must_not_be_confirmed_from_front_only_image / custom rule>
-    severity: <pass | fix | reject | needs_confirmation>
+    severity: <pass | fix | reject | needs_confirmation | blocked>
     message: <Korean validation message>
 ```
 
@@ -211,6 +242,14 @@ entity_type: Faction
 id: FCT_001
 name: <faction name>
 version: 1.0.0
+
+semantic_mapping:
+  class: Faction
+  individual: FCT_001
+  property_model: visual_language
+  relation_model: relations
+  constraint_model: validation_shapes
+  provenance_model: canon_assertions
 
 identity:
   role_in_world: <kingdom | guild | cult | company | school | etc>
@@ -235,6 +274,27 @@ visual_language:
   ui_or_icon_rules:
     - <icon or interface motif>
 
+relations:
+  - subject: <character or asset id>
+    predicate: hasFaction
+    object: FCT_001
+  - subject: <Image id>
+    predicate: depictsFactionVisualLanguage
+    object: FCT_001
+
+canon_assertions:
+  - id: ASSERT_FCT_001
+    subject: FCT_001
+    predicate: hasPalette
+    object: <palette token or value>
+    source_image_id: <Image id or user_answer id>
+    source_role: <approved canon source | canon candidate | reference image | variant | style reference | user confirmation>
+    confidence: <observed | inferred | low_confidence | needs_confirmation | user_confirmed>
+    canon_status: <confirmed | provisional | unresolved | rejected>
+    asserted_by: visual-canon-builder
+    derived_from: <analysis id or question id>
+    needs_confirmation: <true | false>
+
 immutable:
   - <must-keep faction/world rule>
 
@@ -258,6 +318,18 @@ validation_checks:
     - 지역/시대/재질 규칙이 깨지지 않았는가?
   forbidden:
     - 금지 색상, 금지 문양, 금지 실루엣이 생기지 않았는가?
+
+validation_shapes:
+  - target: FCT_001
+    path: visual_language.palette.primary
+    constraint: equals <canon color>
+    severity: <pass | fix | reject | needs_confirmation | blocked>
+    message: 세력 대표 색상이 정본과 다르면 시각 언어가 흔들린다.
+  - target: FCT_001
+    path: visual_language.symbols
+    constraint: min_count 1
+    severity: needs_confirmation
+    message: 세력 문양이 정본으로 확정되지 않았다.
 ```
 
 ## Semantic Relations And Provenance
@@ -285,8 +357,9 @@ canon_assertions:
     predicate: hasEyeColor
     object: pale_gold
     source_image_id: Image_001
-    source_role: canon candidate
+    source_role: approved canon source
     confidence: observed
+    canon_status: confirmed
     asserted_by: visual-canon-builder
     derived_from: image_analysis_001
     needs_confirmation: false
@@ -321,8 +394,15 @@ proportion_lock:
     hip_width_front: <number>
   side_depths:
     head_depth_side: <number or needs_confirmation>
+    shoulder_depth_side: <number or needs_confirmation>
+    torso_depth_side: <number or needs_confirmation>
+    hip_depth_side: <number or needs_confirmation>
     body_depth_side: <number or needs_confirmation>
-  projection_formula: projected_width = abs(front_width * cos(yaw)) + abs(side_depth * sin(yaw))
+    costume_or_shell_depth_side: <number or needs_confirmation>
+  projection_formula_per_landmark: projected_width = abs(front_width * cos(yaw)) + abs(side_depth * sin(yaw))
+  yaw_direction_convention:
+    positive_yaw_reveals: subject_right
+    negative_yaw_reveals: subject_left
   valid_when:
     - yaw_only_turnaround
     - pitch_is_0
@@ -334,9 +414,9 @@ proportion_lock:
     - arms_or_weapon_extend_silhouette
     - cloak_or_skirt_flare_changes_envelope
   examples:
-    front_yaw_0: projected_width = front_width
-    side_yaw_90: projected_width = side_depth
-    three_quarter_yaw_45: projected_width = 0.707 * front_width + 0.707 * side_depth
+    front_yaw_0: each_projected_width = matching_front_width
+    side_yaw_90: each_projected_width = matching_side_depth
+    three_quarter_yaw_45: each_projected_width = 0.707 * matching_front_width + 0.707 * matching_side_depth
   camera_rules:
     reference_sheets:
       - orthographic
@@ -371,6 +451,25 @@ validation_shapes:
     message: 좌우 비대칭 표식은 subject_left/subject_right 기준으로 기록한다.
 ```
 
+## Handoff Status Rules
+
+```yaml
+handoff_status_rules:
+  ready:
+    - all identity-critical assertions are confirmed
+    - canon source, required text, palette, left/right details, and required proportions are resolved
+    - no reject or blocked validation shape is unresolved
+  provisional:
+    - one usable canon candidate exists but is not yet approved
+    - only non-critical style, material, accessory, or atmosphere details remain inferred
+    - requested output can proceed while uncertainty is explicit
+    - unresolved details are listed in Provisional constraints or Unresolved questions
+  blocked:
+    - no usable canon candidate exists
+    - canon candidates conflict on face identity, faction mark, required text, subject-left/right detail, or core proportions
+    - required dimensions or identity-critical facts are missing for the requested output
+```
+
 ## `$imagegen` Prompt Pack
 
 ```text
@@ -384,15 +483,15 @@ Scene/backdrop: <environment or chroma-key background>
 Subject: <main subject and canon identity>
 Style/medium: <photo, illustration, concept art, sprite, icon, etc>
 Composition/framing: <view, crop, layout, camera>
-View/proportion lock: <camera mode, yaw/pitch/roll, fixed height, derived projected width, distortion constraints>
+View/proportion lock: <camera mode, yaw direction, visible side, pitch/roll, fixed height, per-landmark derived projected widths, distortion constraints>
 Lighting/mood: <lighting and emotion>
 Color palette: <canon palette>
 Materials/textures: <canon materials>
 Text (verbatim): "<exact text, if any>"
-Confirmed constraints: <confirmed immutable rules, canon lock, must keep>
-Provisional constraints: <useful but unresolved details; do not present as hard canon>
+Confirmed constraints: <user-confirmed canon, approved-canon-source facts, or clearly declared canon-candidate facts only>
+Provisional constraints: <useful but unresolved details; label source role and do not present as hard canon>
 Unresolved questions: <canon-critical blockers or needs_confirmation items>
-Avoid: <forbidden rules, drift risks, watermark, unwanted text>
+Avoid: <confirmed forbidden rules, request-local prohibitions, drift risks, watermark, unwanted text>
 ```
 
 ## Cutout / Transparent-Background Prompt Add-On
@@ -401,7 +500,7 @@ Use this add-on when the intended result is a sprite, sticker, item cutout, tran
 
 ```text
 Scene/backdrop: flat solid #00ff00 background; perfectly uniform chroma-key field for background removal
-Constraints: full subject visible, crisp separated edges, generous padding, no cast shadow, no contact shadow, no reflection, no background texture, do not use #00ff00 anywhere in the subject
+Confirmed constraints: full subject visible, crisp separated edges, generous padding, no cast shadow, no contact shadow, no reflection, no background texture, do not use #00ff00 anywhere in the subject
 Avoid: shadows, floor plane, gradients, key-color clothing or effects, watermark, extra text
 ```
 

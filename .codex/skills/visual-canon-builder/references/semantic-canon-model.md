@@ -75,8 +75,9 @@ canon_assertions:
     predicate: hasEyeColor
     object: pale_gold
     source_image_id: Image_001
-    source_role: canon candidate
+    source_role: approved canon source
     confidence: observed
+    canon_status: confirmed
     asserted_by: visual-canon-builder
     derived_from: image_analysis_001
     needs_confirmation: false
@@ -94,9 +95,20 @@ rejected
 ```
 
 Rules:
-- Put only `observed` or `user_confirmed` assertions into `confirmed_constraints`.
+- Put only `user_confirmed` assertions or `observed` assertions from an `approved canon source` into `Confirmed constraints`.
+- Put `observed` assertions from a `canon candidate` into `Confirmed constraints` only when the user request clearly declares that source as canon.
+- Keep `observed` facts from `reference image`, `variant`, or `style reference` roles in `Provisional constraints` unless the user confirms them.
 - Keep `inferred`, `low_confidence`, and `needs_confirmation` out of hard `$imagegen` constraints.
 - Never promote style-reference-only assertions to immutable canon unless the user confirms them.
+
+Canon status values:
+
+```text
+confirmed
+provisional
+unresolved
+rejected
+```
 
 ## Validation Shapes
 
@@ -134,18 +146,39 @@ Set `$imagegen` handoff status from assertion state:
 imagegen_handoff:
   status: ready
   ready_when:
-    - all identity-critical assertions are observed or user_confirmed
+    - all identity-critical assertions have canon_status: confirmed
     - no reject-severity validation shape is unresolved
   provisional_when:
+    - one usable canon candidate exists but is not yet approved
     - non-critical style or measurement assertions remain inferred
   blocked_when:
+    - no usable canon candidate exists
     - identity, faction, left/right, or proportion canon conflicts remain unresolved
+```
+
+Use this stricter status matrix when preparing prompt packs:
+
+```yaml
+ready:
+  - all identity-critical assertions have canon_status: confirmed
+  - required text, palette, left/right details, and required proportions are resolved
+  - no reject or blocked validation shape is unresolved
+provisional:
+  - one usable canon candidate exists but is not yet approved
+  - only non-critical style, material, accessory, atmosphere, or minor prop details remain inferred
+  - requested output can proceed while uncertainty is explicit
+  - every uncertain detail is listed under Provisional constraints or Unresolved questions
+blocked:
+  - no usable canon candidate exists
+  - canon candidates conflict on identity-critical facts
+  - face identity, faction mark, required text, subject-left/right detail, or core proportions are unresolved
+  - any reject or blocked validation shape remains unresolved
 ```
 
 Prompt pack fields:
 
 ```text
-Confirmed constraints: observed or user_confirmed facts only
+Confirmed constraints: user-confirmed canon, observed facts from approved canon sources, or observed canon-candidate facts when the request clearly declares the source as canon
 Provisional constraints: inferred or low-confidence facts that may help but must not be treated as canon
 Unresolved questions: canon-critical blockers and needs_confirmation fields
 ```

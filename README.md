@@ -21,6 +21,7 @@ It does not generate images directly. It prepares:
 └── references/
     ├── image-analysis-to-canon.md
     ├── semantic-canon-model.md
+    ├── v3.1-goals-and-manual-tests.md
     └── visual-canon-template.md
 ```
 
@@ -112,10 +113,11 @@ The skill is designed to produce:
 - `Validation Checklist`
 - `Canon Promotion Notes`
 
-Unconfirmed image-derived facts stay in `needs_confirmation`, `provisional_constraints`, or `unresolved_questions`. They should not be promoted into hard `$imagegen` constraints.
+Unconfirmed image-derived facts stay in `needs_confirmation`, `Provisional constraints`, or `Unresolved questions`. They should not be promoted into hard `$imagegen` constraints.
 
 ## Notes
 
 - This is a lightweight ontology-inspired skill, not a full RDF/OWL/SHACL engine.
 - The skill delegates actual image generation to `$imagegen`.
 - The proportion projection model is an approximate orthographic envelope estimate, not a full 3D reconstruction.
+- `references/v3.1-goals-and-manual-tests.md` records the current hardening goals and a Byuli character-sheet manual golden test.

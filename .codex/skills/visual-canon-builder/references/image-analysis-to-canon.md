@@ -7,6 +7,7 @@ Use this reference when `$visual-canon-builder` receives one or more images and 
 - Input Handling
 - Image Inventory
 - Observation Rules
+- Canon Confirmation Gate
 - Single Image Analysis
 - Multiple Image Comparison
 - Proportion Extraction
@@ -84,6 +85,43 @@ Use confidence labels:
 - `inferred`: likely, but not directly confirmed.
 - `low_confidence`: distorted, obscured, or stylized enough to be risky.
 - `needs_confirmation`: canon decision requires the user.
+- `user_confirmed`: the user explicitly approved the assertion as canon.
+
+## Canon Confirmation Gate
+
+Do not treat every observed detail as confirmed canon. A fact can enter `Confirmed constraints` only when the assertion has both reliable confidence and an approved source role.
+
+```yaml
+confirmation_gate:
+  confirmed_constraints_allowed_when:
+    - confidence: user_confirmed
+    - confidence: observed
+      source_role: approved canon source
+    - confidence: observed
+      source_role: canon candidate
+      request_context: clearly_declared_as_canon
+  provisional_constraints_when:
+    - confidence: observed
+      source_role: reference image
+    - confidence: observed
+      source_role: canon candidate
+      request_context: not_yet_approved
+    - confidence: inferred
+    - confidence: low_confidence
+  unresolved_questions_when:
+    - confidence: needs_confirmation
+    - source_role_conflict: true
+    - canon_critical_conflict: true
+```
+
+Use `canon_status` on assertions:
+
+```text
+confirmed
+provisional
+unresolved
+rejected
+```
 
 Use left/right labels from the subject's body, not the viewer's screen:
 
@@ -164,26 +202,37 @@ proportion_model:
     tolerance:
       strict_identity_sheet: 3_percent
       dynamic_scene: 8_percent
+    calibration_status: <uncalibrated | calibrated>
+    tolerance_applies: <true | false>
+    calibration_evidence:
+      pixel_crop: <none | crop coordinates or description>
+      normalized_landmarks: <none | landmark list>
+      measured_by: <agent | user | script | unknown>
+    tolerance_valid_when:
+      - calibrated_reference_sheet
+      - pixel_normalized_landmarks
+      - full_body_uncropped
+      - camera_low_distortion_or_orthographic
+    fallback_when_uncalibrated: use_descriptive_or_low_confidence_proportions
   anatomical_proportion:
     full_height: 1000
     head_height: <observed or needs_confirmation>
+    head_width_front: <observed or needs_confirmation>
+    head_depth_side: <observed or needs_confirmation>
     arm_length: <observed or needs_confirmation>
     leg_length: <observed or needs_confirmation>
   costume_silhouette_envelope:
     shoulder_width_front: <observed or needs_confirmation>
+    shoulder_depth_side: <observed or needs_confirmation>
     torso_width_front: <observed or needs_confirmation>
+    torso_depth_side: <observed or needs_confirmation>
     hip_width_front: <observed or needs_confirmation>
+    hip_depth_side: <observed or needs_confirmation>
     body_depth_side: <observed or needs_confirmation>
-  full_height: 1000
-  head_height: <observed or needs_confirmation>
-  head_width_front: <observed or needs_confirmation>
-  shoulder_width_front: <observed or needs_confirmation>
-  torso_width_front: <observed or needs_confirmation>
-  hip_width_front: <observed or needs_confirmation>
-  body_depth_side: <observed or needs_confirmation>
-  head_depth_side: <observed or needs_confirmation>
-  arm_length: <observed or needs_confirmation>
-  leg_length: <observed or needs_confirmation>
+    costume_or_shell_depth_side: <observed or needs_confirmation>
+  accessory_envelope:
+    weapon_width_or_reach: <observed or not_applicable>
+    prop_extension: <observed or not_applicable>
 ```
 
 Measurement rules:
@@ -194,10 +243,13 @@ Measurement rules:
 - Separate anatomical proportions from costume or silhouette envelope.
 - State whether full height excludes or includes hair, hats, heels, and weapons.
 - Mark any missing or hidden measurement as `needs_confirmation`.
+- Use numeric tolerance bands only after calibrated reference-sheet measurements. Without calibration, describe proportions or mark them `low_confidence`.
+- Normalize pixel measurements by cropping to the declared full-height landmarks, scaling to `full_height: 1000`, and rounding to the nearest practical unit such as 5 height units.
+- Set `calibration_status: uncalibrated` and `tolerance_applies: false` unless pixel crop, normalized landmarks, and measurement method are recorded.
 
 ## View Projection
 
-Store front width and side depth separately. Calculate an approximate orthographic envelope for angled views:
+Store front width and side depth separately per landmark or envelope. Calculate an approximate orthographic envelope for angled views:
 
 ```text
 projected_width = abs(front_width * cos(yaw)) + abs(side_depth * sin(yaw))
@@ -223,14 +275,24 @@ Example calculation:
 ```yaml
 input:
   shoulder_width_front: 260
-  body_depth_side: 150
+  shoulder_depth_side: 150
   yaw: 45
 calculation:
   derived_projected_shoulder_width: 0.707 * 260 + 0.707 * 150
   result: 290
 ```
 
-Use this result as a prompt/validation constraint, not as a pixel-perfect guarantee.
+Compute the formula separately for `head`, `shoulder`, `torso`, `hip`, and `costume_envelope` when those dimensions matter. Do not collapse the entire character into one `derived_projected_width`. Use each result as a prompt/validation constraint, not as a pixel-perfect guarantee.
+
+Record yaw direction:
+
+```yaml
+view_spec:
+  yaw: 45
+  yaw_direction: positive_reveals_subject_right
+  visible_side: subject_right
+  asymmetry_validation_required: true
+```
 
 Invalidation rules:
 - If `pitch` or `roll` is not zero, do not apply numeric yaw-only width checks.
@@ -257,7 +319,7 @@ If the user does not answer and work must continue, mark the field as `needs_con
 Include this line in proportion-critical prompt packs:
 
 ```text
-View/proportion lock: orthographic or low-distortion camera; yaw <degrees>, pitch <degrees>, roll <degrees>; fixed canvas height <height_units>; derived projected width <calculated value or needs_confirmation>; maintain canon head-to-body ratio and limb lengths; no wide-angle distortion or oversized foreground body parts.
+View/proportion lock: orthographic or low-distortion camera; yaw <degrees>, yaw direction <subject-left/right convention>, visible side <subject_left/subject_right/centered/back>, pitch <degrees>, roll <degrees>; fixed canvas height <height_units>; per-landmark derived projected widths <calculated values or needs_confirmation>; maintain canon head-to-body ratio and limb lengths; no wide-angle distortion or oversized foreground body parts.
 ```
 
 Also include execution and certainty fields:
@@ -265,12 +327,28 @@ Also include execution and certainty fields:
 ```text
 Handoff status: <ready | provisional | blocked>
 Imagegen execution: mode=<generate | edit>; input_roles=<reference image/edit target/style reference>; output_aspect=<ratio or size>; transparent_required=<true | false>; variants=<count>; postprocess=<none | chroma-key removal | native transparency fallback>
-Confirmed constraints: <observed or user-confirmed canon only>
+Confirmed constraints: <user-confirmed canon, observed facts from approved canon sources, or observed canon-candidate facts when the request clearly declares the source as canon>
 Provisional constraints: <inferred or low-confidence guidance>
 Unresolved questions: <needs_confirmation items and canon blockers>
 ```
 
 If canon-critical conflicts remain, set `Handoff status` to `blocked` or `provisional`. Do not put unresolved details in `Confirmed constraints`.
+
+Use this handoff status matrix:
+
+```yaml
+ready:
+  - all identity-critical assertions are confirmed
+  - no required view/proportion dimensions are missing
+provisional:
+  - one usable canon candidate exists but is not yet approved
+  - only non-critical style, material, accessory, or atmosphere details remain inferred
+  - requested output can proceed while uncertainty is explicit
+blocked:
+  - no usable canon candidate exists
+  - canon candidates conflict on face identity, required text, subject-left/right detail, faction mark, or core proportions
+  - required dimensions or identity-critical facts are missing for the requested output
+```
 
 For reference sheets:
 
@@ -295,8 +373,9 @@ canon_assertions:
     predicate: hasEyeColor
     object: pale_gold
     source_image_id: Image_001
-    source_role: canon candidate
+    source_role: approved canon source
     confidence: observed
+    canon_status: confirmed
     asserted_by: visual-canon-builder
     derived_from: image_analysis_001
     needs_confirmation: false
@@ -307,6 +386,7 @@ canon_assertions:
     source_image_id: Image_001
     source_role: canon candidate
     confidence: needs_confirmation
+    canon_status: unresolved
     asserted_by: visual-canon-builder
     derived_from: hidden_side_depth
     needs_confirmation: true

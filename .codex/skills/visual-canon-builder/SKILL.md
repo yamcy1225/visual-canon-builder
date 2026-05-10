@@ -32,10 +32,10 @@ This is a lightweight ontology-inspired skill, not a full RDF/OWL/SHACL implemen
 4. Separate observed facts from inference. Mark hidden, ambiguous, or conflicting details as `needs_confirmation` instead of inventing them.
 5. Ask only canon-critical clarification questions: which image is canon, which differences are intended variants, and which details are forbidden drift.
 6. Write a compact visual ontology with English keys and Korean-friendly values/examples.
-7. Compile one or more `$imagegen` prompt packs using the schema below. Put only confirmed facts in `confirmed_constraints`; keep uncertain facts in `provisional_constraints` or `unresolved_questions`.
+7. Compile one or more `$imagegen` prompt packs using the schema below. Put only confirmed canon assertions in `Confirmed constraints`; keep uncertain, inferred, role-ambiguous, or source-ambiguous facts in `Provisional constraints` or `Unresolved questions`.
 8. Add a validation checklist and canon promotion rule so generated images do not become canon automatically.
 
-For fuller copy/paste templates, read `references/visual-canon-template.md`. For image-to-canon analysis, read `references/image-analysis-to-canon.md`. For semantic mapping, assertion provenance, and shape rules, read `references/semantic-canon-model.md`.
+For fuller copy/paste templates, read `references/visual-canon-template.md`. For image-to-canon analysis, read `references/image-analysis-to-canon.md`. For semantic mapping, assertion provenance, and shape rules, read `references/semantic-canon-model.md`. For regression goals and manual sample tests, read `references/v3.1-goals-and-manual-tests.md`.
 
 ## Image Analysis To Canon
 
@@ -51,6 +51,53 @@ When one or more images are provided, use this pipeline before ontology writing:
 Do not treat a stylized or perspective-distorted image as a measurement source unless the user confirms it is a reference sheet. Strong perspective images should become `scene-specific perspective` references, not canon measurement sources.
 
 Image roles gate canon promotion. Repetition alone is not enough: repeated details in two `style reference` images must not outrank a single declared `canon candidate`. If image roles conflict or are unknown, keep the affected facts out of `immutable` and ask.
+
+## Confirmation And Handoff Gates
+
+Treat `observed` and `confirmed canon` as different states:
+
+```yaml
+confirmation_gate:
+  confirmed_when:
+    - confidence: user_confirmed
+    - confidence: observed
+      source_role: approved canon source
+    - confidence: observed
+      source_role: canon candidate
+      request_context: clearly_declared_as_canon
+  provisional_when:
+    - confidence: observed
+      source_role: reference image
+    - confidence: observed
+      source_role: canon candidate
+      request_context: not_yet_approved
+    - confidence: inferred
+    - confidence: low_confidence
+  blocked_when:
+    - identity_critical_conflict_unresolved
+    - left_right_asymmetry_conflict_unresolved
+    - canon_source_conflict_unresolved
+    - proportion_required_but_missing_reference_dimension
+```
+
+Set `$imagegen` handoff status from canon risk:
+
+```yaml
+handoff_status_rules:
+  ready:
+    - all identity-critical assertions are confirmed
+    - all required view/proportion locks are confirmed or not needed
+    - no reject or blocked validation shape is unresolved
+  provisional:
+    - one usable canon candidate exists but is not yet approved
+    - only non-critical style, material, accessory, or atmosphere details remain inferred
+    - requested image can be drafted without pretending provisional facts are canon
+    - output can proceed if uncertainty is explicitly named in Provisional constraints
+  blocked:
+    - no usable canon candidate exists
+    - multiple canon candidates conflict on identity-critical facts
+    - face identity, subject-left/right details, required text, faction mark, or core proportions are required for the requested output and unresolved or conflicting
+```
 
 ## Semantic Mapping And Provenance
 
@@ -90,8 +137,9 @@ canon_assertions:
     predicate: hasEyeColor
     object: pale_gold
     source_image_id: Image_001
-    source_role: canon candidate
+    source_role: approved canon source
     confidence: observed
+    canon_status: confirmed
     asserted_by: visual-canon-builder
     derived_from: image_analysis_001
     needs_confirmation: false
@@ -164,8 +212,9 @@ canon_assertions:
     predicate: hasEyeColor
     object: pale_gold
     source_image_id: Image_001
-    source_role: canon candidate
+    source_role: approved canon source
     confidence: observed
+    canon_status: confirmed
     asserted_by: visual-canon-builder
     derived_from: image_analysis_001
     needs_confirmation: false
@@ -176,6 +225,7 @@ canon_assertions:
     source_image_id: Image_001
     source_role: canon candidate
     confidence: needs_confirmation
+    canon_status: unresolved
     asserted_by: visual-canon-builder
     derived_from: hidden_side_depth
     needs_confirmation: true
@@ -193,6 +243,18 @@ proportion_model:
     tolerance:
       strict_identity_sheet: 3_percent
       dynamic_scene: 8_percent
+    calibration_status: uncalibrated
+    tolerance_applies: false
+    calibration_evidence:
+      pixel_crop: needs_calibration
+      normalized_landmarks: needs_calibration
+      measured_by: needs_calibration
+    tolerance_valid_when:
+      - calibrated_reference_sheet
+      - pixel_normalized_landmarks
+      - full_body_uncropped
+      - camera_low_distortion_or_orthographic
+    fallback_when_uncalibrated: use_descriptive_or_low_confidence_proportions
     do_not_measure_from:
       - wide_angle_perspective
       - foreshortened_action_pose
@@ -201,30 +263,36 @@ proportion_model:
   anatomical_proportion:
     full_height: 1000
     head_height: 154
+    head_width_front: 120
+    head_depth_side: needs_confirmation
     arm_length: 390
     leg_length: 540
   costume_silhouette_envelope:
     shoulder_width_front: 260
+    shoulder_depth_side: needs_confirmation
     torso_width_front: 210
+    torso_depth_side: needs_confirmation
     hip_width_front: 230
+    hip_depth_side: needs_confirmation
     body_depth_side: needs_confirmation
-  full_height: 1000
-  head_height: 154
-  head_width_front: 120
-  shoulder_width_front: 260
-  torso_width_front: 210
-  hip_width_front: 230
-  body_depth_side: needs_confirmation
-  head_depth_side: needs_confirmation
-  arm_length: 390
-  leg_length: 540
+    costume_or_shell_depth_side: needs_confirmation
   confidence:
     full_height: observed
     side_depths: needs_confirmation
 
 projection_rules:
   formula_type: orthographic_envelope_estimate
-  width_formula: projected_width = abs(front_width * cos(yaw)) + abs(side_depth * sin(yaw))
+  width_formula_per_landmark: projected_width = abs(front_width * cos(yaw)) + abs(side_depth * sin(yaw))
+  compute_per_landmark:
+    - head
+    - shoulder
+    - torso
+    - hip
+    - costume_envelope
+  do_not_collapse_to_single_width: true
+  yaw_direction_convention:
+    positive_yaw_reveals: subject_right
+    negative_yaw_reveals: subject_left
   default_reference_camera: orthographic
   valid_when:
     - yaw_only_turnaround
@@ -245,12 +313,20 @@ projection_rules:
 view_spec:
   view_type: three_quarter
   yaw: 45
+  yaw_direction: positive_reveals_subject_right
+  visible_side: subject_right
   pitch: 0
   roll: 0
   camera_mode: orthographic
   fixed_canvas_height: 1000
-  derived_projected_width: needs_side_depth_confirmation
+  derived_projected_widths:
+    head: needs_head_depth_confirmation
+    shoulder: needs_shoulder_depth_confirmation
+    torso: needs_torso_depth_confirmation
+    hip: needs_hip_depth_confirmation
+    costume_envelope: needs_body_depth_confirmation
   numeric_width_check: invalid_until_side_depth_confirmed
+  asymmetry_validation_required: true
 
 immutable:
   - pale_gold almond eyes
@@ -306,7 +382,7 @@ validation_shapes:
 
 ## `$imagegen` Prompt Pack
 
-When the user wants an image or an image prompt, compile the canon into this `$imagegen`-compatible schema. Use only fields that help. Put canon-preserving rules in `Constraints`; put prohibited drift in `Avoid`.
+When the user wants an image or an image prompt, compile the canon into this `$imagegen`-compatible schema. Use only fields that help. Put confirmed canon-preserving rules in `Confirmed constraints`; put helpful but unresolved guidance in `Provisional constraints`; put prohibited drift in `Avoid`.
 
 ```text
 Use case: <current $imagegen taxonomy slug>
@@ -319,20 +395,22 @@ Scene/backdrop: <environment or flat chroma-key background when needed>
 Subject: <main subject and canon identity>
 Style/medium: <illustration, concept art, anime, painterly, game sprite, etc.>
 Composition/framing: <front view, 3/4 view, full body, close-up, sheet layout, etc.>
-View/proportion lock: <camera mode, yaw/pitch/roll, fixed height, derived projected width, distortion constraints>
+View/proportion lock: <camera mode, yaw direction, visible side, pitch/roll, fixed height, per-landmark derived projected widths, distortion constraints>
 Lighting/mood: <lighting and tone>
 Color palette: <canon palette>
 Materials/textures: <cloth, metal, skin, hair, prop materials>
 Text (verbatim): "<exact text if needed>"
-Confirmed constraints: <confirmed immutable canon rules and must-keep details only>
-Provisional constraints: <useful but unresolved details; do not present as hard canon>
+Confirmed constraints: <user-confirmed canon, approved-canon-source facts, or clearly declared canon-candidate facts only>
+Provisional constraints: <useful but unresolved details; label source role and do not present as hard canon>
 Unresolved questions: <canon-critical blockers or needs_confirmation items>
-Avoid: <forbidden rules, drift risks, watermark, unwanted text>
+Avoid: <confirmed forbidden rules, request-local prohibitions, drift risks, watermark, unwanted text>
 ```
 
 If canon-critical conflicts remain, set `Handoff status` to `blocked` or `provisional`. Never move unresolved details into `Confirmed constraints`; keep them in `Provisional constraints` or `Unresolved questions`.
 
-For proportion-critical requests, compute `derived_projected_width` from the canon measurement model:
+Descriptive prompt fields such as `Subject`, `Style/medium`, `Color palette`, and `Materials/textures` may summarize provisional image evidence, but they must label it as provisional or reference-derived when it is not confirmed. Reserve `Text (verbatim)` for text the user explicitly requested, user-confirmed, or supplied by an approved canon source; otherwise put visible but unconfirmed text in `Provisional constraints` and ask. Reserve `Avoid` for confirmed forbidden drift or request-local exclusions, not for locking unresolved canon.
+
+For proportion-critical requests, compute `derived_projected_widths` per landmark or silhouette envelope from the canon measurement model:
 
 ```text
 projected_width = abs(front_width * cos(yaw)) + abs(side_depth * sin(yaw))
@@ -341,9 +419,9 @@ side yaw 90: projected_width = side_depth
 three-quarter yaw 45: projected_width = 0.707 * front_width + 0.707 * side_depth
 ```
 
-Use `orthographic`, `neutral camera height`, and `no wide-angle distortion` for reference sheets and turnarounds. For dynamic scenes, phrase the lock as "maintain canon proportions with low-distortion perspective" rather than forcing exact sheet measurements.
+Run the formula separately for head, shoulder, torso, hip, and costume/accessory envelopes when those dimensions matter. Use `orthographic`, `neutral camera height`, and `no wide-angle distortion` for reference sheets and turnarounds. For dynamic scenes, phrase the lock as "maintain canon proportions with low-distortion perspective" rather than forcing exact sheet measurements.
 
-Use current `$imagegen` taxonomy slugs when they fit:
+Use active `$imagegen` taxonomy slugs when they fit. If the active taxonomy is unavailable, use a plain use-case label and avoid claiming the slug is current. Examples that were current at authoring time:
 - Generate: `photorealistic-natural`, `product-mockup`, `ui-mockup`, `infographic-diagram`, `scientific-educational`, `ads-marketing`, `productivity-visual`, `logo-brand`, `illustration-story`, `stylized-concept`, `historical-scene`.
 - Edit: `text-localization`, `identity-preserve`, `precise-object-edit`, `lighting-weather`, `background-extraction`, `style-transfer`, `compositing`, `sketch-to-render`.
 
@@ -353,7 +431,7 @@ For sprite or transparent-background requests, prepare the prompt for `$imagegen
 
 ```text
 Scene/backdrop: flat solid #00ff00 background; perfectly uniform chroma-key field for background removal
-Constraints: full subject visible, crisp separated edges, generous padding, no cast shadow, no contact shadow, no reflection, no background texture, do not use #00ff00 anywhere in the subject
+Confirmed constraints: full subject visible, crisp separated edges, generous padding, no cast shadow, no contact shadow, no reflection, no background texture, do not use #00ff00 anywhere in the subject
 Avoid: shadows, floor plane, gradients, key-color clothing or effects, watermark, extra text
 ```
 
