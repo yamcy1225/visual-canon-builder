@@ -1,4 +1,4 @@
 interface:
   display_name: "Visual Canon Builder"
   short_description: "Build imagegen-ready visual canon kits"
-  default_prompt: "Use $visual-canon-builder to turn character or worldbuilding notes into an imagegen-ready visual canon kit."
+  default_prompt: "Use $visual-canon-builder to turn character notes, worldbuilding, or reference images into an imagegen-ready visual canon kit."
