@@ -1,6 +1,6 @@
 # Evidence Interview RAG Mode
 
-Use this reference when `$visual-canon-builder` must lock canon together with the user before finalizing a visual ontology. v3.4 is current-conversation evidence retrieval, not vector-database RAG. Do not create a vector database, local HTML UI, persistent index, or external RAG service.
+Use this reference when `$visual-canon-builder` must lock canon together with the user before finalizing a visual ontology. This is current-conversation evidence retrieval, not vector-database RAG. Do not create a vector database, local HTML UI, persistent index, or external RAG service.
 
 ## Workflow
 
@@ -11,10 +11,94 @@ Source Inventory -> Evidence Cards -> Candidate Assertions -> Approval Review Pa
 Rules:
 - `retrieval_scope` defaults to `current_conversation_only`.
 - Every candidate assertion must point to one or more `evidence_refs`.
-- Approval is batched: output one editable `approval_payload` so the user can approve, revise, reject, or keep items provisional in one reply.
+- Approval can be batched, but the default surface is guided: show one active approval question first, then a compact `user_review` and plain-language reply shortcuts before any YAML payload.
+- Keep one editable `approval_payload` for auditability so strict users can approve, revise, reject, or keep items provisional in one reply.
 - Before approval, candidate assertions are `canon_status: provisional` or `unresolved`, never `confirmed`.
 - Final `confirmed` status requires `approval_status: approved`, at least one `evidence_refs` item, matching `assertion_version`/`value_hash`, and a linked `user_answers` record.
 - `evidence_refs` is the canonical support link. `relations: supportedBy` may mirror it for graph traversal, but must be derived from `evidence_refs`, not maintained separately.
+
+## Guided Approval Interview
+
+Use this as the first visible section whenever canon candidates need approval. It creates the missing "question -> user answer -> next question" feeling while preserving the batch payload for audit.
+
+```yaml
+guided_approval_interview:
+  status: awaiting_user_decision
+  current_question_index: 1
+  total_questions: 3
+  current_question:
+    id: QAPP_Horangnim_Identity
+    label: "캐릭터 정체성"
+    asks: "흰 호랑이 마스코트 정체성, 다이아몬드형 눈, 검은 줄무늬를 정본으로 승인할까요?"
+    recommendation: "1"
+    choices:
+      - key: "1"
+        label: "승인"
+        effect: "관련 identity assertions -> approved/confirmed"
+      - key: "2"
+        label: "수정해서 승인"
+        effect: "사용자 수정값으로 replacement assertion 생성"
+      - key: "3"
+        label: "임시 유지"
+        effect: "keep_provisional"
+      - key: "4"
+        label: "거절"
+        effect: "rejected"
+    reply_hint: "숫자만 답해도 되고, `수정: 눈은 원형이 아니라 다이아몬드형`처럼 답해도 됩니다."
+```
+
+Rules:
+- Ask exactly one active approval question at a time unless the user explicitly asks for batch approval.
+- Put this section before `User Review`, tables, ontology, and prompt packs.
+- The question must name the visual decision in natural language, not only an assertion ID.
+- The response may still include provisional ontology and `$imagegen` prompt pack below, but it should end with the same current question reminder.
+- When the user answers, create `user_answers`, update assertion approval state, recompute `lock_summary`, and ask the next unresolved approval question.
+- If the user says `추천대로 진행`, apply all recommended actions and skip remaining low-risk interview questions.
+
+## User Review First
+
+Always put this compact layer before technical ontology details. It answers "what did you find, what do I need to decide, and what can I reply?"
+
+```yaml
+user_review:
+  status: "초안 준비됨; 아직 정본 잠금 전"
+  evidence_scope: current_conversation_only
+  found:
+    - "흰 호랑이 마스코트: 둥근 귀, 다이아몬드 눈, 검은 줄무늬"
+    - "기본 의상: 하와이안 셔츠, 어두운 반바지, 흰 클로그"
+    - "소품 후보: 긴 보드"
+  needs_decision:
+    - label: "캐릭터 정체성"
+      covers:
+        - ASSERT_Horangnim_FaceIdentity
+        - ASSERT_Horangnim_TigerMarkings
+      recommendation: approve
+      reason: "정면/측면/후면/표정 컷에서 반복됩니다."
+    - label: "긴 보드"
+      covers:
+        - ASSERT_Horangnim_LongboardProp
+      recommendation: keep_provisional
+      reason: "액션 컷과 소품 컷에는 보이지만 항상 착용하는 물건인지는 미확정입니다."
+  fast_reply:
+    - "추천대로 진행"
+    - "전체 정본 승인"
+    - "정체성과 의상은 승인, 소품은 임시"
+    - "수정: 긴 보드는 장면 소품"
+```
+
+Do not show `value_hash` or long assertion IDs in the top-level prose unless the user asks for strict/audit mode. Use readable labels first; keep IDs in `covers` for traceability.
+
+## Quick Approval Table
+
+Use a short table when the user is likely reviewing several candidates:
+
+| 결정 항목 | 추천 | 이유 | 빠른 답변 |
+| --- | --- | --- | --- |
+| 캐릭터 정체성 | 승인 | 여러 뷰에서 반복 | `캐릭터 정체성 승인` |
+| 기본 의상 | 승인 | 턴어라운드와 소품 컷 일치 | `기본 의상 승인` |
+| 긴 보드 | 임시 | 고정 소품인지 미확정 | `긴 보드는 임시` |
+
+Limit the table to the few decisions the user can realistically act on. Put lower-risk details into the technical payload with safe defaults.
 
 ## Source Inventory
 
@@ -109,7 +193,7 @@ approval_review_pack:
       risk_if_wrong: face identity drift
 ```
 
-Use clickable choice UI when available. If not available, show the payload below and ask the user to return it with edits.
+Use clickable choice UI when available. If not available, show the human-friendly `fast_reply` options first. Show the payload below as an audit fallback, not as the primary thing the user must edit.
 
 ## Approval Payload
 
@@ -136,6 +220,52 @@ approval_payload:
 Allowed `action` values are `approve`, `reject`, `revise`, and `keep_provisional`.
 
 Reject stale payloads: if `review_pack_id`, `expected_assertion_version`, or `expected_value_hash` does not match the current assertion, keep the assertion pending and ask for a refreshed approval payload.
+
+## Natural-Language Approval
+
+Accept short plain-language replies and convert them to the same internal provenance as YAML decisions:
+
+```yaml
+natural_language_approval_map:
+  - user_says:
+      - "추천대로 진행"
+      - "apply recommendations"
+    action:
+      approve:
+        risk_tiers:
+          - identity_critical
+          - canon_critical
+      keep_provisional:
+        risk_tiers:
+          - optional
+          - style_only
+        unless_user_explicitly_promotes: true
+  - user_says:
+      - "전체 승인"
+      - "전체 정본 승인"
+      - "approve all as canon"
+    action:
+      approve:
+        risk_tiers:
+          - identity_critical
+          - canon_critical
+          - optional
+          - style_only
+  - user_says:
+      - "정체성과 의상은 승인, 소품은 임시"
+    action:
+      approve_labels:
+        - "캐릭터 정체성"
+        - "기본 의상"
+      keep_provisional_labels:
+        - "소품"
+  - user_says_pattern: "수정: <label>=<new value>"
+    action: revise
+  - user_says_pattern: "거절: <label>"
+    action: reject
+```
+
+When interpreting natural language, create `user_answers` that preserve the original user phrase and the normalized action. If a phrase is ambiguous, apply only the unambiguous parts and keep the rest pending or provisional.
 
 ## Applying Answers
 

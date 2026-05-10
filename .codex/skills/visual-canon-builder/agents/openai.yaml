@@ -1,4 +1,4 @@
 interface:
   display_name: "Visual Canon Builder"
-  short_description: "Build evidence-approved imagegen canon kits"
-  default_prompt: "Use $visual-canon-builder to run an evidence interview on character notes, worldbuilding, or reference images, then turn approved assertions into an imagegen-ready visual canon kit."
+  short_description: "Preserve identity and style for imagegen"
+  default_prompt: "Use $visual-canon-builder to run a guided evidence interview on character notes, worldbuilding, or reference images, ask approval questions one by one, build identity canon, style canon, generation contract, and evaluation loop, then turn approved assertions into an imagegen-ready edit/reference prompt pack that prevents visual drift."

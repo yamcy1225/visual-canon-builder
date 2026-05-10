@@ -14,6 +14,9 @@ The skill outputs practical YAML, but the model should behave like a small visua
 - `provenance`: evidence showing where a canon assertion came from.
 - `evidence_card`: a source-grounded observation node used by the evidence interview.
 - `approval`: a user decision node that locks, revises, rejects, or keeps an assertion provisional.
+- `style_canon`: identity-bound or reference-bound visual treatment, separate from character identity.
+- `generation_contract`: operational handoff rules for image generation/editing.
+- `evaluation_result`: generated-output review record that can create drift patterns and prompt patches.
 
 ## Semantic Mapping
 
@@ -71,6 +74,16 @@ answersQuestion
 wasAnsweredBy
 supportedBy
 hasApprovalStatus
+servesAs
+hasStyleCanon
+boundToIdentity
+mustPreserve
+allowsMutation
+forbidsMutation
+evaluates
+detectsDrift
+correctedBy
+promptsNext
 ```
 
 `evidence_refs` is the canonical evidence relation on an assertion. `supportedBy` triples are optional graph mirrors derived from `evidence_refs`; do not let them diverge.
@@ -174,6 +187,131 @@ confirmed
 provisional
 unresolved
 rejected
+```
+
+## Expanded Classes For Image Generation Control
+
+Use these classes when the task needs original-feeling preservation or retry loops:
+
+```yaml
+classes:
+  - VisualAsset
+  - Character
+  - Costume
+  - Prop
+  - Environment
+  - ReferenceImage
+  - IdentityAnchor
+  - StyleAnchor
+  - CompositionAnchor
+  - PaletteAnchor
+  - ProportionModel
+  - ViewProjection
+  - CanonAssertion
+  - StyleCanon
+  - StyleAssertion
+  - GenerationContract
+  - EvaluationResult
+  - DriftPattern
+  - PromptPatch
+  - ForbiddenExample
+```
+
+Example control triples:
+
+```yaml
+relations:
+  - subject: Image_001
+    predicate: servesAs
+    object: IdentityAnchor
+  - subject: Image_001
+    predicate: servesAs
+    object: StyleAnchor
+  - subject: CHR_001
+    predicate: hasStyleCanon
+    object: STYLE_001
+  - subject: STYLE_001
+    predicate: boundToIdentity
+    object: CHR_001
+  - subject: GEN_001
+    predicate: mustPreserve
+    object: STYLE_001
+  - subject: EVAL_001
+    predicate: detectsDrift
+    object: Drift_face_geometry
+  - subject: Drift_face_geometry
+    predicate: correctedBy
+    object: PATCH_001
+```
+
+## Style Canon And Generation Contract Records
+
+```yaml
+style_canon:
+  id: STYLE_001
+  style_role: identity_bound_style
+  source_images:
+    - Image_001
+  line_language:
+    contour_weight: clean_bold_black
+    interior_line_density: sparse
+  rendering_language:
+    shading_model: minimal_flat_grayscale
+    surface_finish: matte
+  color_language:
+    palette_drift_tolerance: low
+  identity_style_binding:
+    style_is_part_of_identity: true
+
+generation_contract:
+  id: GEN_001
+  task_sensitivity: identity_sensitive
+  default_mode: edit_or_reference_image
+  text_generate_allowed: false
+  reference_policy:
+    identity_anchor: Image_001
+    style_anchor: Image_001
+  change_budget:
+    identity: 0_percent
+    style: 0_to_5_percent
+  mutation_policy:
+    allowed_to_change:
+      - user_requested_pose
+    must_not_change:
+      - face_geometry
+      - head_body_ratio
+      - line_language
+      - palette
+```
+
+## Evaluation, Drift, And Prompt Patch Records
+
+```yaml
+evaluation_result:
+  id: EVAL_001
+  generated_image_id: GENIMG_001
+  compared_against:
+    identity_anchor: Image_001
+    style_anchor: Image_001
+    generation_contract: GEN_001
+  classification: fix
+  drift_patterns:
+    - Drift_line_weight_changed
+    - Drift_limbs_elongated
+  prompt_patch: PATCH_001
+
+drift_patterns:
+  - id: Drift_line_weight_changed
+    category: style_drift
+    message: output uses thicker comic outline than reference
+    severity: fix
+
+prompt_patches:
+  - id: PATCH_001
+    target: next_imagegen_prompt
+    instructions:
+      - Restore the source-cell line weight and sparse interior detail from Image_001.
+      - Keep compact mascot limb proportions; do not elongate legs.
 ```
 
 ## Validation Shapes

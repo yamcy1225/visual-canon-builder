@@ -1,6 +1,6 @@
 ---
 name: visual-canon-builder
-description: Build imagegen-ready visual canon kits from character, faction, worldbuilding, costume, item, environment, game-asset notes, or one or more reference images. Use when Codex needs to analyze visual references, run an evidence interview before canon lock, ask canon-critical clarification questions, document observed visual facts, create a lightweight visual knowledge graph with provenance, validation shapes, proportion/view-projection rules, and produce safe `$imagegen` prompt packs without directly generating images.
+description: Build user-friendly, imagegen-ready visual canon kits from character, faction, worldbuilding, costume, item, environment, game-asset notes, or one or more reference images, especially when preserving identity, original style, proportions, palette, line language, and preventing visual drift matters. Use when Codex needs to analyze visual references, run a compact evidence interview before canon lock, let the user approve/revise/reject canon candidates in plain language, document observed visual facts, create a lightweight visual knowledge graph with provenance, validation shapes, proportion/view-projection rules, generation contracts, evaluation loops, and safe `$imagegen` edit/reference prompt packs without directly generating images.
 ---
 
 # Visual Canon Builder
@@ -17,7 +17,7 @@ This is a lightweight ontology-inspired skill, not a full RDF/OWL/SHACL implemen
 
 1. Identify the asset target: character, faction, costume, item, environment, UI icon set, skill effect, sprite, or scene.
 2. If images are provided, create an `Image Inventory` first. If the user gives local image paths, inspect them before analysis; if images are already attached, analyze them directly.
-3. Before locking canon, run Evidence Interview Mode: split current conversation inputs into `Evidence Cards`, connect them to `Candidate Assertions`, emit an `Approval Review Pack`, and require explicit user approval before any candidate assertion becomes `confirmed`.
+3. Before locking canon, run User-Friendly Evidence Interview Mode: start with a short user-facing review, split current conversation inputs into `Evidence Cards`, connect them to `Candidate Assertions`, emit an `Approval Review Pack`, and require explicit user approval before any candidate assertion becomes `confirmed`.
 4. Extract canon rules from notes and images:
    - `immutable`: must never change.
    - `allowed_variation`: can change by scene, pose, season, damage, emotion, camera, or asset type.
@@ -28,6 +28,12 @@ This is a lightweight ontology-inspired skill, not a full RDF/OWL/SHACL implemen
    - `semantic_mapping`: mapping from YAML fields to class, individual, property, relation, constraint, and provenance concepts.
    - `relations`: graph-like subject/predicate/object triples such as `Image_001 depicts CHR_001`.
    - `canon_assertions`: individual claims with source, confidence, and confirmation state.
+   - `style_fidelity_model`: line quality, rendering depth, stylization level, detail density, and forbidden style drift.
+   - `style_canon`: identity-bound visual treatment, including line, rendering, color, lighting, texture, camera, and composition language.
+   - `generation_contract`: task sensitivity, reference policy, change budget, invariant restatement, allowed mutations, and forbidden mutations.
+   - `evaluation_contract`: drift taxonomy, pass/fix/reject rules, retry policy, and next-prompt patch requirements.
+   - `reference_preserve_mode`: when generated output must preserve a specific source cell's silhouette, proportions, and style rather than reinterpret the character.
+   - `source_cell_asset`: cropped or isolated source-cell image required when exact preservation is expected.
    - `proportion_model`: normalized width, height, depth, and limb measurements.
    - `view_spec`: requested view angle and camera constraints.
    - `validation_shapes`: SHACL-like rules with target, path, constraint, severity, and message.
@@ -35,10 +41,11 @@ This is a lightweight ontology-inspired skill, not a full RDF/OWL/SHACL implemen
 5. Separate observed facts from inference. Mark hidden, ambiguous, unapproved, or conflicting details as `needs_confirmation`, `pending_user_approval`, or `keep_provisional` instead of inventing or prematurely confirming them.
 6. Ask only canon-critical clarification questions through the Interactive Clarification Loop: create a `question_queue` with stable IDs, mark each question `blocking_for_ready` and `blocking_for_provisional`, then continue with a provisional ontology and `$imagegen` prompt pack unless a hard-stop condition applies.
 7. Write a compact visual ontology with English keys and Korean-friendly values/examples.
-8. Compile one or more `$imagegen` prompt packs using the schema below. Put only user-approved canon assertions in `Confirmed constraints`; keep pending, inferred, role-ambiguous, or source-ambiguous facts in `Provisional constraints` or `Unresolved questions`.
-9. Add a validation checklist and canon promotion rule so generated images do not become canon automatically.
+8. For identity-sensitive or style-sensitive requests, treat the prompt pack as a generation contract: prefer `edit` or reference-image handoff, state what can change, restate invariants every time, and avoid text-only generation unless the user wants loose inspiration or no reference exists.
+9. Compile one or more `$imagegen` prompt packs using the schema below. Put only user-approved canon assertions in `Confirmed constraints`; keep pending, inferred, role-ambiguous, or source-ambiguous facts in `Provisional constraints` or `Unresolved questions`.
+10. Add a validation checklist, drift taxonomy, prompt-patch loop, and canon promotion rule so generated images do not become canon automatically.
 
-For fuller copy/paste templates, read `references/visual-canon-template.md`. For image-to-canon analysis, read `references/image-analysis-to-canon.md`. For evidence interview RAG mode, read `references/evidence-interview-rag.md`. For semantic mapping, assertion provenance, and shape rules, read `references/semantic-canon-model.md`. For question/answer loops, read `references/interactive-clarification-loop.md`. For regression goals and manual sample tests, read `references/v3.4-goals-and-manual-tests.md`.
+For fuller copy/paste templates, read `references/visual-canon-template.md`. For image-to-canon analysis, read `references/image-analysis-to-canon.md`. For identity-bound style extraction, read `references/style-canon-model.md`. For edit/reference handoff policy and prompt contracts, read `references/generation-contract.md`. For generated-result review, drift taxonomy, and next-prompt patches, read `references/evaluation-loop.md`. For evidence interview RAG mode, read `references/evidence-interview-rag.md`. For semantic mapping, assertion provenance, and shape rules, read `references/semantic-canon-model.md`. For question/answer loops, read `references/interactive-clarification-loop.md`. For regression goals and manual sample tests, read `references/v3.4-goals-and-manual-tests.md`, `references/v3.5-ux-manual-tests.md`, `references/v3.6-style-fidelity-tests.md`, and `references/v3.7-reference-preserve-tests.md`.
 
 ## Image Analysis To Canon
 
@@ -55,11 +62,23 @@ Do not treat a stylized or perspective-distorted image as a measurement source u
 
 Image roles gate canon promotion. Repetition alone is not enough: repeated details in two `style reference` images must not outrank a single declared `canon candidate`. If image roles conflict or are unknown, keep the affected facts out of `immutable` and ask.
 
-## Evidence Interview Mode
+## User-Friendly Evidence Interview Mode
 
-Run this before final canon lock. Treat the current conversation as the retrieval corpus: attached images, local image analyses, and user notes become temporary RAG sources. Do not create a vector DB, local UI, or persistent store in v3.4.
+Run this before final canon lock. Treat the current conversation as the retrieval corpus: attached images, local image analyses, and user notes become temporary RAG sources. Do not create a vector DB, local UI, or persistent store.
 
 Output `Evidence Cards`, `Retrieval Trace`, `Approval Review Pack`, `Approval Payload`, and `Lock Summary`. Every candidate assertion must include `evidence_refs`, `approval_status`, and `retrieval_scope: current_conversation_only`. Before approval, assertions stay `provisional` or `unresolved`; final `confirmed` requires `approval_status: approved`, evidence, matching version/hash, and `user_answers` provenance.
+
+Default UX rule: do not make the user edit YAML unless they ask for strict/audit mode. Put `Guided Approval Interview`, `User Review`, `Quick Approval Table`, and `Next Reply Options` before technical details; put technical IDs and full YAML in a `Technical Appendix` when needed. Show at most 3 user-facing decision groups at the top.
+
+`Guided Approval Interview` is the active approval process. Ask exactly one current approval question at the top of the response, label it `질문 1/N`, provide 2-4 numbered choices, include the recommended choice, and tell the user they can answer with the number or a short natural-language revision. Keep the provisional ontology and prompt pack available below, but make the current question impossible to miss. When the user answers, record a `user_answers` provenance item, update the affected assertions, then ask the next unresolved approval question until canon-critical decisions are resolved.
+
+Accept plain Korean or English replies and convert them into `approval_payload` decisions internally:
+
+- `추천대로 진행`, `apply recommendations` -> approve recommended identity/costume/proportion items and keep recommended optional props provisional.
+- `전체 정본 승인`, `approve all as canon` -> approve all visible candidate assertions, including props and accessories.
+- `정본은 승인, 소품은 임시` -> approve identity/costume/proportion candidates and keep prop candidates provisional.
+- `수정: <label>=<new value>` -> create `user_answers`, mark the original assertion `revised`, and create a replacement assertion.
+- `거절: <label>` or `reject: <label>` -> reject that candidate and keep it out of `Confirmed constraints`.
 
 ## Interactive Clarification Loop
 
@@ -116,6 +135,20 @@ handoff_status_rules:
     - multiple canon candidates conflict on identity-critical facts
     - face identity, subject-left/right details, required text, faction mark, or core proportions are required for the requested output and unresolved or conflicting
 ```
+
+## Identity, Style, And Generation Contracts
+
+When the user asks to preserve the original image, same character, same mascot, brand feeling, art direction, or visual vibe, treat the work as `identity_sensitive` or `style_sensitive`, not loose inspiration.
+
+Separate the canon into operational layers:
+
+- `identity_canon`: face geometry, silhouette, anatomy, proportions, unique marks, symbols, costume structure, and subject-left/right details.
+- `style_canon`: line weight, line variation, shading model, rendering medium, texture density, palette temperature, value range, lighting mood, camera language, and composition rhythm.
+- `variation_canon`: pose, expression, background, weather, action, minor wear, scene props, and other user-requested mutations.
+- `generation_contract`: reference roles, change budget, allowed mutations, forbidden mutations, and invariant restatement.
+- `evaluation_contract`: identity/style/proportion/semantic checks, drift taxonomy, pass/fix/reject rules, and next-prompt patch format.
+
+For identity-sensitive tasks, prefer `edit`, `edit_target_preserve`, or reference-image handoff. Text-only generation is allowed only when no reference image exists, the user explicitly asks for loose inspiration, or identity/style preservation is not required. The prompt pack must say what changes and what stays unchanged; more descriptive adjectives are not a substitute for an explicit contract.
 
 ## Semantic Mapping And Provenance
 
@@ -195,6 +228,10 @@ semantic_mapping:
   individual: CHR_001
   properties:
     - visual_core
+    - style_canon
+    - style_fidelity_model
+    - generation_contract
+    - evaluation_contract
     - proportion_model
     - projection_rules
   relation_model: relations
@@ -229,6 +266,36 @@ visual_core:
     primary: deep_indigo
     secondary: antique_silver
     accent: pale_gold
+
+style_fidelity_model:
+  source_style_role: approved_reference_sheet_style
+  rendering_mode:
+    value: flat_2d_character_sheet_line_art
+    immutable: true
+  line_quality:
+    outer_contour: clean_bold_black_line
+    interior_lines: simple_thin_black_detail_lines
+    sketch_or_hatching: only_if_visible_in_reference
+  shading:
+    allowed: minimal_flat_grayscale_or_subtle_reference_matching_shadow
+    forbidden:
+      - semi_realistic_soft_airbrush_shading
+      - 3d_render_lighting
+      - glossy_material_highlights
+      - realistic_fur_or_skin_texture
+  detail_density:
+    value: match_reference_sheet_simplification
+    forbidden:
+      - realistic_product_rendering
+      - extra_fashion_illustration_detail
+  style_drift_forbidden:
+    - semi_realistic_character_art
+    - 3d_or_clay_render
+    - adult_anatomical_proportions
+    - painterly_gradient_background
+
+# For full `style_canon`, `generation_contract`, and
+# `evaluation_contract` shapes, use the dedicated reference files.
 
 canon_assertions:
   - id: ASSERT_001
@@ -419,13 +486,20 @@ When the user wants an image or an image prompt, compile the canon into this `$i
 ```text
 Use case: <current $imagegen taxonomy slug>
 Asset type: <character concept sheet, sprite cutout, faction banner, item icon, scene illustration, etc.>
+Task sensitivity: <identity_sensitive | style_sensitive | loose_inspiration>
 Primary request: <the user's requested image>
 Handoff status: <ready | provisional | blocked>
-Imagegen execution: mode=<generate | edit>; input_roles=<reference image/edit target/style reference>; output_aspect=<ratio or size>; transparent_required=<true | false>; variants=<count>; postprocess=<none | chroma-key removal | native transparency fallback>
+Imagegen execution: mode=<edit | reference_generate | text_generate>; text_generate_allowed=<true | false>; reason=<why this mode is acceptable>; input_roles=<identity_anchor/style_anchor/edit_target/composition_reference/forbidden_example>; output_aspect=<ratio or size>; transparent_required=<true | false>; variants=<count>; postprocess=<none | chroma-key removal | native transparency fallback>
+Reference preserve mode: <off | identity_preserve | edit_target_preserve>; source_cell=<front/full-body/expression/prop crop>; preserve=<silhouette, head/body ratio, limb length, line style, detail density>; allowed_change=<pose/expression/text only>
+Source cell asset: <required | optional | not_needed>; crop_id=<source-cell crop or isolated edit target>; full_sheet_only=<allowed | blocked_for_exact_preservation>
+Reference policy: <what each input image anchors; identity/style/composition/forbidden examples>
+Change budget: <identity 0%; style 0-5%; pose/background/costume locked or allowed by request>
 Input images: <Image 1: reference image; Image 2: edit target; Image 3: style reference> (optional)
 Scene/backdrop: <environment or flat chroma-key background when needed>
 Subject: <main subject and canon identity>
 Style/medium: <illustration, concept art, anime, painterly, game sprite, etc.>
+Style fidelity lock: <reference-sheet style, flatness, line weight, shading depth, detail density, and forbidden style drift>
+Generation contract: <identity-preserving task, not redesign; preserve exact anchors; restate invariants>
 Composition/framing: <front view, 3/4 view, full body, close-up, sheet layout, etc.>
 View/proportion lock: <camera mode, yaw direction, visible side, pitch/roll, fixed height, per-landmark derived projected widths, distortion constraints>
 Lighting/mood: <lighting and tone>
@@ -433,10 +507,13 @@ Color palette: <canon palette>
 Materials/textures: <cloth, metal, skin, hair, prop materials>
 Text (verbatim): "<exact text if needed>"
 Confirmed constraints: <assertions with approval_status approved and user_answers provenance only>
+Style constraints: <approved or explicitly user-confirmed style canon only>
 Provisional constraints: <useful but unresolved details; label source role and do not present as hard canon>
 Generation constraints: <request-local technical constraints that are not canon, such as chroma-key, padding, or no-shadow requirements>
+Change only: <specific user-requested mutations>
 Unresolved questions: <canon-critical blockers or needs_confirmation items>
 Avoid: <confirmed forbidden rules, request-local prohibitions, drift risks, watermark, unwanted text>
+Evaluation checklist: <identity_pass/style_pass/proportion_pass/semantic_pass/drift_notes/next_prompt_patch>
 ```
 
 If canon-critical conflicts remain, set `Handoff status` to `blocked` or `provisional`. Never move unresolved details into `Confirmed constraints`; keep them in `Provisional constraints` or `Unresolved questions`.
@@ -444,6 +521,12 @@ If canon-critical conflicts remain, set `Handoff status` to `blocked` or `provis
 Descriptive prompt fields such as `Subject`, `Style/medium`, `Color palette`, and `Materials/textures` may summarize provisional image evidence, but they must label it as provisional or reference-derived when it is not confirmed. Reserve `Text (verbatim)` for text attached to approved assertions; otherwise put visible but unconfirmed text in `Provisional constraints` and ask. Reserve `Avoid` for confirmed forbidden drift or request-local exclusions, not for locking unresolved canon.
 
 For proportion-critical requests, compute `derived_projected_widths = abs(front_width * cos(yaw)) + abs(side_depth * sin(yaw))` separately for head, shoulder, torso, hip, and costume/accessory envelopes. Use `orthographic`, `neutral camera height`, and `no wide-angle distortion` for reference sheets; for dynamic scenes, phrase the lock as "maintain canon proportions with low-distortion perspective" rather than forcing exact sheet measurements.
+
+For reference-sheet-derived mascot or cartoon characters, always add a strict style fidelity lock. Name the original visual treatment explicitly, such as "flat 2D black-and-white mascot line art from the reference sheet." Reject or avoid style drift into semi-realistic character art, 3D render shading, realistic fur, realistic sneaker/product rendering, adult anatomical proportions, fashion illustration, painterly gradients, glossy materials, or heavy volumetric lighting unless the user explicitly requests a style translation.
+
+When the user expects a generated image to look like the same exact character sheet design, do not hand off a full multi-pose sheet as the only image. Require a `source_cell_asset`: a cropped or isolated cell that matches the requested output, such as the front full-body pose. Prefer `edit_target_preserve` when only expression, arm position, or shirt text should change; use `identity_preserve` only when a genuinely new pose is needed. If the source cell is not available, set `Handoff status: blocked` or `provisional` with `Unresolved questions: source_cell_asset required`, rather than pretending prompt text can guarantee exact preservation.
+
+If a previous generation preserves identity but changes proportions/style, mark it `reject` and switch the next handoff to source-cell-based edit/preserve mode. More adjectives are not enough when the input image is a full sheet and the output must match one specific cell.
 
 Use active `$imagegen` taxonomy slugs when they fit; if unavailable, use a plain use-case label and avoid claiming the slug is current.
 
@@ -474,6 +557,25 @@ Add these proportion-specific checks when a `proportion_model` or `view_spec` ex
 - 어깨, 골반, 머리 폭이 시점 변화에 맞게 자연스럽게 줄거나 넓어졌는가?
 - 원근 때문에 손, 얼굴, 무기만 과도하게 커지지 않았는가?
 
+Add these style-fidelity checks when a `style_fidelity_model` exists:
+- 원본의 line weight, flat shading, and detail density가 유지되는가?
+- 반실사화, 3D화, 과한 렌더링, 사실적인 제품 디테일이 생기지 않았는가?
+- 마스코트의 나이감/귀여운 비율이 성숙하거나 패션 일러스트처럼 늘어나지 않았는가?
+- reference-sheet character art가 scene illustration이나 product render 스타일로 바뀌지 않았는가?
+
+Add these reference-preservation checks when `reference_preserve_mode` is active:
+- 선택한 source cell의 머리:몸:다리 비율이 유지되는가?
+- full multi-pose sheet가 아니라 실제 source_cell_asset 또는 isolated edit target을 입력으로 사용했는가?
+- 신발, 손, 팔, 다리 디테일이 원본보다 현실적으로 복잡해지지 않았는가?
+- 요청한 변경 외의 얼굴 구조, 몸통 길이, 다리 길이, 신발 크기가 재설계되지 않았는가?
+- identity만 맞고 silhouette/proportion/style이 다른 경우 `fix`가 아니라 `reject`로 판정했는가?
+
+Add these evaluation-loop outputs after reviewing a generated image:
+- `evaluation_result`: generated image id, compared anchors, pass/fix/reject classification, and confidence.
+- `drift_patterns`: identity, style, proportion, semantic, and composition drift labels.
+- `prompt_patch`: short corrective instructions for the next generation or edit.
+- `forbidden_example_candidate`: whether a rejected output should be stored as a useful forbidden example.
+
 Use this canon status flow:
 
 ```text
@@ -485,8 +587,9 @@ Do not treat a generated image as canon just because it looks good. Only approve
 ## Output Contract
 Return these sections unless the user asks for a narrower artifact:
 
-1. Source/evidence and analysis: `Image Inventory`, `Evidence Cards`, `Retrieval Trace`, `Approval Review Pack`, `Approval Payload`, `Lock Summary`, `Observed Visual Facts`, `Conflicts And Unknowns`, `Question Queue`, and `Clarification Gate`.
-2. Approval/canon: `User Answer Provenance` when applying replies, `Visual Canon Ontology`, `Semantic Relations And Provenance`, and `Validation Shapes`.
-3. Handoff: `$imagegen Prompt Pack`, `Validation Checklist`, and `Canon Promotion Notes`.
+1. User-facing approval first: `Guided Approval Interview`, `User Review`, `Quick Approval Table`, and `Next Reply Options`.
+2. Source/evidence and analysis: `Image Inventory`, `Evidence Cards`, `Retrieval Trace`, `Approval Review Pack`, `Approval Payload`, `Lock Summary`, `Observed Visual Facts`, `Conflicts And Unknowns`, `Question Queue`, and `Clarification Gate`.
+3. Approval/canon: `User Answer Provenance` when applying replies, `Visual Canon Ontology`, `Semantic Relations And Provenance`, and `Validation Shapes`.
+4. Handoff: `$imagegen Prompt Pack`, `Validation Checklist`, and `Canon Promotion Notes`.
 
-Keep outputs concise enough to be pasted into `$imagegen`, but include all immutable and forbidden rules needed to prevent visual drift.
+Keep the first screen concise and decision-oriented. Use Korean labels for user decisions, hide hashes from the top-level review, and include IDs/hashes only in technical sections. Keep outputs concise enough to be pasted into `$imagegen`, but include all immutable and forbidden rules needed to prevent visual drift.

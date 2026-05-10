@@ -1,6 +1,6 @@
 # Image Analysis To Canon
 
-Use this reference when `$visual-canon-builder` receives one or more images and needs to turn visual evidence into canon documentation, proportion rules, and `$imagegen` prompt packs.
+Use this reference when `$visual-canon-builder` receives one or more images and needs to turn visual evidence into canon documentation, style fidelity rules, proportion rules, and `$imagegen` prompt packs.
 
 ## Contents
 
@@ -11,6 +11,8 @@ Use this reference when `$visual-canon-builder` receives one or more images and 
 - Canon Confirmation Gate
 - Single Image Analysis
 - Multiple Image Comparison
+- Style Fidelity Extraction
+- Reference Preserve Planning
 - Proportion Extraction
 - View Projection
 - Clarifying Questions
@@ -75,12 +77,69 @@ observed_visual_facts:
     - pale gold accent
   markings:
     - crescent emblem on collar
+  style_fidelity:
+    rendering_mode: flat_2d_character_sheet_line_art
+    line_quality: clean_black_outline_with_simple_inner_lines
+    shading: minimal_flat_grayscale
+    detail_density: simplified_reference_sheet_detail
 
 inferred_or_uncertain:
   body_depth_side: needs_confirmation
   back_design: needs_confirmation
   exact_material: inferred_matte_silk_low_confidence
 ```
+
+## Style Fidelity Extraction
+
+When the reference image has a distinctive visual treatment, extract it as `style_fidelity_model` before handoff. This is separate from identity canon: the character can keep the same identity but still fail if the rendering style drifts.
+
+Track:
+- rendering mode: flat 2D, ink sketch, cel animation, painterly, 3D, photo, etc.
+- line quality: bold outline, thin interior detail, hatching, sketch roughness.
+- shading depth: none, flat grayscale, cel shadow, soft airbrush, volumetric.
+- detail density: simplified mascot sheet, realistic product detail, dense fashion illustration, etc.
+- forbidden drift: semi-realistic anatomy, 3D render, realistic fur/skin, product-render shoes, glossy lighting.
+
+For mascot/reference-sheet art, default to strict style preservation unless the user asks for a style translation.
+
+## Reference Preserve Planning
+
+If the user expects an output to look like the same exact character design, choose a source cell before `$imagegen` handoff. A full character sheet is useful evidence, but it is not a sufficient edit/preserve target. A single closest source cell crop or isolated image is required for exact preservation.
+
+Record:
+
+```yaml
+reference_preserve_model:
+  mode: identity_preserve
+  source_cell_asset:
+    required: true
+    crop_id: CROP_Dallae_FrontFullBody_001
+    asset_path: needs_crop_or_attached_cell
+    full_sheet_only: blocked_for_exact_preservation
+  source_cell:
+    source_id: SRC_Image_001
+    region: front_full_body
+    role: proportion_and_style_anchor
+  preserve:
+    - silhouette
+    - head_body_ratio
+    - limb_length
+    - shoe_simplification
+    - line_style
+    - detail_density
+  allowed_change:
+    - expression
+    - shirt_text
+    - arm_pose
+  forbidden_change:
+    - body_redesign
+    - elongated_adult_proportions
+    - realistic_shoe_redesign
+```
+
+Use `edit_target_preserve` when the task is closer to editing one reference pose than generating a new pose. Use `identity_preserve` when a new pose is needed but the character's source-cell proportions and style must remain locked.
+
+If only the full sheet is available, tell the user that exact preservation needs a crop/isolated source-cell asset. The skill may still produce a provisional prompt, but the handoff should not be marked `ready` for exact preservation until the crop is available.
 
 ## Evidence Interview RAG Mode
 

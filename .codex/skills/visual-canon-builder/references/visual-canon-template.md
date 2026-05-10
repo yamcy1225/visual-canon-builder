@@ -7,6 +7,11 @@ Use these templates when `$visual-canon-builder` needs a fuller reusable structu
 - Character Canon Ontology
 - Faction Or World Canon Ontology
 - Semantic Relations And Provenance
+- Style Canon Model
+- Generation Contract
+- Evaluation Loop
+- Guided Approval Interview
+- User Review First
 - Evidence Interview RAG Mode
 - Interactive Clarification Loop
 - Projection Rules Template
@@ -70,6 +75,151 @@ visual_core:
     forbidden:
       - <forbidden element>
 
+style_fidelity_model:
+  source_style_role: <approved_reference_sheet_style | style_reference | user_declared_style>
+  rendering_mode:
+    value: <flat_2d_character_sheet_line_art | sketch_line_art | cel_animation | etc>
+    immutable: <true | false>
+  line_quality:
+    outer_contour: <clean_bold_black_line | rough_sketch_line | etc>
+    interior_lines: <simple_thin_black_detail_lines | hatching | etc>
+  shading:
+    allowed: <minimal_flat_grayscale | none | cel_shadow_only>
+    forbidden:
+      - <semi_realistic_soft_airbrush_shading>
+      - <3d_render_lighting>
+      - <glossy_material_highlights>
+  detail_density:
+    value: <match_reference_sheet_simplification>
+    forbidden:
+      - <realistic_product_rendering>
+      - <extra_fashion_illustration_detail>
+  style_drift_forbidden:
+    - <semi_realistic_character_art>
+    - <3d_or_clay_render>
+    - <adult_anatomical_proportions>
+
+reference_preserve_model:
+  mode: <off | identity_preserve | edit_target_preserve>
+  source_cell_asset:
+    required: <true | false>
+    crop_id: <CROP_001 or null>
+    asset_path: <path or attached image id or null>
+    full_sheet_only: <allowed | blocked_for_exact_preservation>
+  source_cell:
+    source_id: <SRC_Image_001>
+    region: <front_full_body | side_full_body | expression_head | prop_crop>
+    role: <proportion_and_style_anchor | edit_target | identity_reference>
+  preserve:
+    - silhouette
+    - head_body_ratio
+    - limb_length
+    - shoe_simplification
+    - line_style
+    - detail_density
+  allowed_change:
+    - <pose | expression | shirt_text | minor_hand_position>
+  forbidden_change:
+    - body_redesign
+    - elongated_adult_proportions
+    - realistic_product_detail
+
+style_canon:
+  id: <STYLE_001>
+  source_images:
+    - <SRC_Image_001>
+  style_role: <identity_bound_style | style_reference | mood_reference | loose_inspiration>
+  line_language:
+    contour_weight: <thin | medium | bold | variable>
+    contour_variation: <uniform | tapered_pressure | sketchy | none>
+    interior_line_density: <sparse | medium | dense>
+    edge_softness: <vector_sharp | clean_but_not_vector_sharp | painterly_soft>
+    forbidden:
+      - <thick_comic_outline>
+      - <sketchy_noise_lines>
+  rendering_language:
+    medium: <flat_2d | cel_animation | painterly | 3d_render | photo | ink_sketch>
+    shading_model: <none | flat_grayscale | cel_shadow | soft_cel | painterly_blend | volumetric>
+    detail_density: <low | medium_low | medium | high>
+    surface_finish: <matte | satin | glossy>
+    forbidden:
+      - <glossy_3d_render>
+      - <hyperreal_skin_texture>
+  color_language:
+    saturation: <muted | reference_matched | vivid | neon>
+    value_range: <low_key | mid_to_high | broad>
+    temperature: <warm | neutral | cool | mixed>
+    palette_drift_tolerance: <none | low | medium>
+  lighting_language:
+    direction: <front | front_left | top | ambient | scene_specific>
+    contrast: <gentle | moderate | harsh>
+    mood: <calm | playful | dramatic | eerie | etc>
+  camera_language:
+    camera_height: <neutral | low | high>
+    lens_feel: <orthographic | low_distortion | portrait_lens | wide_angle>
+    perspective_strength: <none | low | moderate | strong>
+  identity_style_binding:
+    style_is_part_of_identity: <true | false>
+    must_preserve_across:
+      - <new_pose | new_scene | outfit_variant>
+
+generation_contract:
+  id: <GEN_001>
+  task_sensitivity: <identity_sensitive | style_sensitive | loose_inspiration>
+  default_mode: <edit_or_reference_image | reference_image_preferred | text_generate_allowed>
+  text_generate_allowed: <true | false>
+  reference_policy:
+    identity_anchor: <SRC_Image_001 or null>
+    style_anchor: <SRC_Image_001 or null>
+    composition_reference: <SRC_Image_002 or null>
+    forbidden_examples:
+      - <SRC_Bad_001>
+  change_budget:
+    identity: <0_percent | low | open>
+    style: <0_to_5_percent | low | open>
+    pose: <locked | allowed_if_requested | open>
+    background: <locked | allowed_if_requested | open>
+    costume: <locked | requested_change_only | open>
+  mutation_policy:
+    allowed_to_change:
+      - <user_requested_change>
+    must_not_change:
+      - <face_geometry>
+      - <head_body_ratio>
+      - <line_language>
+      - <palette>
+  invariant_restatement:
+    required_every_prompt: true
+    lines:
+      - <Preserve the exact same character identity from the reference image.>
+      - <Only change: requested_change.>
+
+evaluation_contract:
+  after_each_generation:
+    - assign_generated_image_id
+    - compare_against_identity_anchor
+    - compare_against_style_anchor
+    - classify_result
+    - record_drift_patterns
+    - produce_prompt_patch
+  drift_taxonomy:
+    identity_drift:
+      - face_geometry_changed
+      - head_body_ratio_changed
+      - silhouette_changed
+    style_drift:
+      - line_weight_changed
+      - shading_model_changed
+      - palette_temperature_changed
+    semantic_drift:
+      - missing_symbol
+      - wrong_left_right
+      - added_forbidden_prop
+  retry_rules:
+    pass: ask_user_for_approval_before_canon_promotion
+    fix: generate_targeted_edit_prompt_or_prompt_patch
+    reject: keep_out_of_canon_and_consider_forbidden_example
+
 orientation_conventions:
   left_right_basis: subject_left_subject_right
   mirror_validation: required_for_asymmetric_details
@@ -80,6 +230,48 @@ relations:
   - subject: <entity id>
     predicate: <relation predicate>
     object: <entity id or value>
+
+guided_approval_interview:
+  status: <awaiting_user_decision | applying_answer | complete>
+  current_question_index: <1-based index>
+  total_questions: <count>
+  current_question:
+    id: <QAPP_001>
+    label: <사용자용 결정 항목>
+    asks: <자연어 승인 질문>
+    recommendation: <choice key>
+    choices:
+      - key: "1"
+        label: <승인 | 수정해서 승인 | 임시 유지 | 거절>
+        effect: <affected assertions and status change>
+    reply_hint: <숫자 또는 짧은 수정 답변 안내>
+  answered:
+    - question_id: <QAPP_000>
+      answer: <user answer or null>
+      user_answer_id: <UA_000 or null>
+
+user_review:
+  status: <초안 준비됨; 아직 정본 잠금 전 | 일부 승인됨 | 정본 잠금 완료>
+  evidence_scope: current_conversation_only
+  found:
+    - <사용자가 바로 이해할 수 있는 관찰 요약>
+  needs_decision:
+    - label: <캐릭터 정체성 | 기본 의상 | 고정 소품 | 정확한 문구 등>
+      covers:
+        - <ASSERT_001>
+      recommendation: <approve | reject | revise | keep_provisional>
+      reason: <추천 이유>
+  fast_reply:
+    - "추천대로 진행"
+    - "전체 정본 승인"
+    - "정체성과 의상은 승인, 소품은 임시"
+    - "수정: <항목>=<새 값>"
+
+quick_approval_table:
+  - label: <사용자용 결정 항목>
+    recommendation: <승인 | 수정 | 거절 | 임시>
+    reason: <짧은 이유>
+    reply_example: <짧은 자연어 답변>
 
 source_inventory:
   retrieval_scope: current_conversation_only
@@ -151,7 +343,7 @@ approval_review_pack:
 approval_payload:
   review_pack_id: <REVIEW_001>
   applies_to: <entity id>
-  answer_mode: batch
+  answer_mode: <natural_language_first | batch_yaml>
   decisions:
     - assertion_id: <ASSERT_001>
       expected_assertion_version: <integer>
@@ -644,13 +836,20 @@ handoff_status_rules:
 ```text
 Use case: <imagegen taxonomy slug>
 Asset type: <where this asset will be used>
+Task sensitivity: <identity_sensitive | style_sensitive | loose_inspiration>
 Primary request: <requested image>
 Handoff status: <ready | provisional | blocked>
-Imagegen execution: mode=<generate | edit>; input_roles=<reference image/edit target/style reference>; output_aspect=<ratio or size>; transparent_required=<true | false>; variants=<count>; postprocess=<none | chroma-key removal | native transparency fallback>
+Imagegen execution: mode=<edit | reference_generate | text_generate>; text_generate_allowed=<true | false>; reason=<why this mode is acceptable>; input_roles=<identity_anchor/style_anchor/edit_target/composition_reference/forbidden_example>; output_aspect=<ratio or size>; transparent_required=<true | false>; variants=<count>; postprocess=<none | chroma-key removal | native transparency fallback>
+Reference preserve mode: <off | identity_preserve | edit_target_preserve>; source_cell=<front/full-body/expression/prop crop>; preserve=<silhouette, head/body ratio, limb length, line style, detail density>; allowed_change=<pose/expression/text only>
+Source cell asset: <required | optional | not_needed>; crop_id=<source-cell crop or isolated edit target>; full_sheet_only=<allowed | blocked_for_exact_preservation>
+Reference policy: <identity/style/composition/forbidden role for each input>
+Change budget: <identity/style/palette/costume/pose/background limits>
 Input images: <Image 1: reference image; Image 2: edit target; Image 3: style reference> (optional)
 Scene/backdrop: <environment or chroma-key background>
 Subject: <main subject and canon identity>
 Style/medium: <photo, illustration, concept art, sprite, icon, etc>
+Style fidelity lock: <reference-sheet style, flatness, line weight, shading depth, detail density, and forbidden style drift>
+Generation contract: <identity-preserving task, not redesign; preserve exact anchors; restate invariants>
 Composition/framing: <view, crop, layout, camera>
 View/proportion lock: <camera mode, yaw direction, visible side, pitch/roll, fixed height, per-landmark derived projected widths, distortion constraints>
 Lighting/mood: <lighting and emotion>
@@ -658,10 +857,13 @@ Color palette: <canon palette>
 Materials/textures: <canon materials>
 Text (verbatim): "<exact text, if any>"
 Confirmed constraints: <assertions with approval_status approved and user_answers provenance only>
+Style constraints: <approved or user-confirmed style canon only>
 Provisional constraints: <useful but unresolved details; label source role and do not present as hard canon>
 Generation constraints: <request-local technical constraints that are not canon, such as chroma-key, padding, or no-shadow requirements>
+Change only: <specific user-requested mutations>
 Unresolved questions: <canon-critical blockers or needs_confirmation items>
 Avoid: <confirmed forbidden rules, request-local prohibitions, drift risks, watermark, unwanted text>
+Evaluation checklist: <identity_pass/style_pass/proportion_pass/semantic_pass/drift_notes/next_prompt_patch>
 ```
 
 ## Cutout / Transparent-Background Prompt Add-On
@@ -684,6 +886,17 @@ Avoid: shadows, floor plane, gradients, key-color clothing or effects, watermark
 [Variation Check]
 - 이번 장면에서 허용된 변주만 적용되었는가?
 - 포즈, 날씨, 손상, 표정 변화가 정체성을 침범하지 않는가?
+
+[Style Fidelity Check]
+- 원본 레퍼런스의 line weight, flatness, shading depth, detail density가 유지되는가?
+- 반실사화, 3D 렌더, 과한 부드러운 명암, 사실적인 털/피부/신발 디테일이 생기지 않았는가?
+- 마스코트의 귀여운 나이감과 단순화된 비율이 성숙하거나 패션 일러스트처럼 늘어나지 않았는가?
+
+[Reference Preservation Check]
+- 선택한 source cell의 silhouette, head/body ratio, limb length가 유지되는가?
+- full multi-pose sheet가 아니라 실제 source_cell_asset 또는 isolated edit target을 입력으로 사용했는가?
+- 요청한 변경 외의 얼굴 구조, 몸통 길이, 다리 길이, 신발 크기가 재설계되지 않았는가?
+- identity만 맞고 원본 비율/스타일이 다르면 `reject`로 판정했는가?
 
 [Proportion Check]
 - 전체 키가 기준 캔버스 높이에 맞는가?
