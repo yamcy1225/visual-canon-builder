@@ -1,14 +1,14 @@
 # Interactive Clarification Loop
 
-Use this reference when `$visual-canon-builder` needs user input before promoting visual facts, resolving conflicts, or preparing a ready `$imagegen` handoff.
+Use this reference when `$visual-canon-builder` needs user input before promoting visual facts, resolving conflicts, or preparing a ready `$imagegen` handoff. The default behavior is immediate provisional progression: ask the questions as a structured queue, but still produce a provisional ontology and `$imagegen` prompt pack in the same response when that is safe.
 
 ## Purpose
 
-The skill should not merely list questions and continue as if they were answered. It should:
+The skill should not merely list questions and continue as if they were answered. It should also avoid ping-pong blocking when a useful provisional result is possible. It should:
 
 1. Create a stable `question_queue`.
-2. Ask the user only the blocking or high-value questions.
-3. Stop when blocking answers are required for a ready handoff.
+2. Ask the user only ready-blocking or high-value questions.
+3. Mark each question separately for `ready` handoff and `provisional` handoff.
 4. Convert user replies into `user_answers` provenance records.
 5. Recompute canon assertions, handoff status, prompt constraints, and unresolved questions.
 
@@ -16,15 +16,18 @@ The skill should not merely list questions and continue as if they were answered
 
 ```yaml
 clarification_gate:
-  status: waiting_for_user
-  reason: blocking_questions_prevent_ready_handoff
+  status: proceeding_with_provisional
+  reason: unresolved_questions_do_not_block_provisional_handoff
+  mode: immediate_provisional_progression
+  hard_stop: false
   max_questions_this_turn: 5
 
 question_queue:
   - id: Q_Byuli_001
     question: Image_Byuli_001을 approved canon source로 승격할까요?
     type: canon_source_approval
-    blocking: true
+    blocking_for_ready: true
+    blocking_for_provisional: false
     affects:
       - canon_assertions.*.source_role
       - canon_assertions.*.canon_status
@@ -44,27 +47,31 @@ Question fields:
 - `id`: stable ID that can be answered later.
 - `question`: user-facing question, concise and specific.
 - `type`: reason category such as `canon_source_approval`, `variant_or_drift`, `exact_text`, `prop_permanence`, `left_right_asymmetry`, `measurement_source`, or `forbidden_rule`.
-- `blocking`: `true` only when the answer changes whether handoff can be `ready`.
+- `blocking_for_ready`: `true` when the answer changes whether handoff can be `ready`.
+- `blocking_for_provisional`: `true` only when the answer is required before even a provisional handoff can be safe.
 - `affects`: ontology fields, assertions, or prompt fields changed by the answer.
 - `required_for`: what cannot be safely finalized without the answer.
 - `default_if_unanswered`: usually `keep_provisional`, `keep_unresolved`, or `block_ready_handoff`.
 
-## When To Stop And Wait
+## When To Proceed Or Stop
 
-Stop and wait for user input when:
-- A `blocking: true` question prevents `Handoff status: ready`.
-- The user explicitly asks to confirm before `$imagegen`.
-- A canon-critical conflict would otherwise be guessed.
+Proceed immediately with `Handoff status: provisional` when:
+- One usable canon candidate exists.
+- Unanswered questions can be kept out of `Confirmed constraints`.
+- The prompt pack can put uncertain facts in `Provisional constraints` or `Unresolved questions`.
+- The requested image can be drafted without pretending unconfirmed facts are canon.
 
-Do not stop when:
-- Only minor atmosphere, optional props, non-critical texture, or mood remains uncertain.
-- A provisional prompt pack is acceptable and every uncertainty is clearly labeled.
+Stop and wait only when `hard_stop: true`, such as:
+- There is no usable canon candidate.
+- Identity-critical canon candidates conflict and no safe provisional identity can be selected.
+- Required exact text, face identity, left/right asymmetry, or proportion lock would have to be guessed.
+- The user explicitly asks for confirmed-only output, ready-only output, or approval before `$imagegen`.
 
-When stopping, end the response with the queue and a short instruction such as:
+When proceeding, include the queue and a short status line such as:
 
 ```text
-Clarification Gate: waiting_for_user
-아래 질문에 답하면 user_answers provenance로 반영해서 온톨로지와 $imagegen prompt pack을 다시 계산하겠습니다.
+Clarification Gate: proceeding_with_provisional
+아래 질문은 ready 승격을 위한 큐입니다. 현재 산출물은 provisional로 즉시 생성했고, 답변을 주면 user_answers provenance로 반영해 다시 계산합니다.
 ```
 
 ## User Answer Provenance
@@ -96,6 +103,10 @@ canon_assertions:
     source_role: approved canon source
     confidence: user_confirmed
     canon_status: confirmed
+    approval_status: approved
+    evidence_refs:
+      - EV_Byuli_Face_001
+    retrieval_scope: current_conversation_only
     asserted_by: user
     derived_from:
       - image_analysis_byuli_001
@@ -121,30 +132,31 @@ After applying answers:
 
 1. Move answered questions from `question_queue` to `answered_questions`.
 2. Update affected `canon_assertions`:
-   - `approve_as_canon` -> `source_role: approved canon source`, `confidence: user_confirmed`, `canon_status: confirmed`.
+   - `approve_as_canon` -> `source_role: approved canon source`, `approval_status: approved`, `confidence: user_confirmed`, `canon_status: confirmed`.
    - `keep_as_candidate` -> keep observed facts `canon_status: provisional`.
    - `reference_only` -> `source_role: reference image`, keep out of hard canon.
    - `not_permanent_prop` -> move prop facts to `allowed_variation` or scene-specific notes.
-   - `exact_text_required` -> put text in `Text (verbatim)` and `Confirmed constraints`.
+   - `exact_text_required` -> put text in `Text (verbatim)`; move it into `Confirmed constraints` only after the linked assertion is approved.
 3. Recompute `Handoff status`:
-   - `ready` only when all blocking questions are answered and no blocking validation shape remains.
-   - `provisional` when remaining uncertainty is explicit and non-blocking.
-   - `blocked` when a blocking question remains unanswered.
+   - `ready` only when all `blocking_for_ready: true` questions are answered and no reject validation shape remains.
+   - `provisional` when remaining uncertainty is explicit and no `blocking_for_provisional: true` question remains unanswered.
+   - `blocked` only when a `blocking_for_provisional: true` question remains unanswered or a hard-stop condition applies.
 4. Rebuild `$imagegen Prompt Pack` from the recomputed assertion states.
 
 ## Output Pattern
 
-When questions are pending:
+When questions are pending but a provisional result is safe:
 
 ```text
-Clarification Gate: waiting_for_user
+Clarification Gate: proceeding_with_provisional
 
 Question Queue:
-Q_Byuli_001 [blocking]: Image_Byuli_001을 approved canon source로 승격할까요?
-Q_Byuli_002 [blocking]: 티셔츠 문구를 항상 정확히 유지해야 하나요?
-Q_Byuli_003 [non_blocking]: 말차 라떼와 스케이트보드는 고정 소품인가요?
+Q_Byuli_001 [ready-blocking]: Image_Byuli_001을 approved canon source로 승격할까요?
+Q_Byuli_002 [ready-blocking]: 티셔츠 문구를 항상 정확히 유지해야 하나요?
+Q_Byuli_003 [optional]: 말차 라떼와 스케이트보드는 고정 소품인가요?
 
 Current Handoff status: provisional
+Provisional output generated now: ontology + $imagegen prompt pack.
 Next action after answers: update user_answers provenance, recompute canon_status, regenerate prompt pack.
 ```
 

@@ -7,6 +7,7 @@ Use this reference when `$visual-canon-builder` receives one or more images and 
 - Input Handling
 - Image Inventory
 - Observation Rules
+- Evidence Interview RAG Mode
 - Canon Confirmation Gate
 - Single Image Analysis
 - Multiple Image Comparison
@@ -81,6 +82,45 @@ inferred_or_uncertain:
   exact_material: inferred_matte_silk_low_confidence
 ```
 
+## Evidence Interview RAG Mode
+
+When the user wants canon built from conversation images or notes, create evidence cards before writing final canon. The retrieval corpus is only the current conversation unless the user explicitly provides more sources.
+
+```yaml
+source_inventory:
+  retrieval_scope: current_conversation_only
+  sources:
+    - id: SRC_Image_001
+      type: attached_image
+      role: canon candidate
+      description: character sheet reference
+
+evidence_cards:
+  - id: EV_Character_Face_001
+    source_id: SRC_Image_001
+    modality: image
+    region_or_note: face views
+    source_anchor: Image 1 / face views
+    view_label: front_and_expression_heads
+    bbox_or_region: descriptive_region_no_pixel_bbox
+    source_text_span: null
+    observation: directly visible face identity details
+    confidence: observed
+    usable_for:
+      - identity
+      - face
+    limitations:
+      - hidden side details cannot be proven
+
+retrieval_trace:
+  - assertion_id: ASSERT_Character_Face_001
+    evidence_refs:
+      - EV_Character_Face_001
+    rationale: face assertion is visible in the front and expression views
+```
+
+Every image-derived assertion must include `evidence_refs`, `approval_status`, and `retrieval_scope`. Before the user returns an approval payload, keep the assertion out of `Confirmed constraints`.
+
 Use confidence labels:
 - `observed`: directly visible and reliable.
 - `inferred`: likely, but not directly confirmed.
@@ -90,17 +130,15 @@ Use confidence labels:
 
 ## Canon Confirmation Gate
 
-Do not treat every observed detail as confirmed canon. A fact can enter `Confirmed constraints` only when the assertion has both reliable confidence and an approved source role.
+Do not treat every observed detail as confirmed canon. A fact can enter `Confirmed constraints` only when the assertion has `approval_status: approved`, linked `user_answers` provenance, and at least one `evidence_refs` item.
 
 ```yaml
 confirmation_gate:
   confirmed_constraints_allowed_when:
     - confidence: user_confirmed
-    - confidence: observed
-      source_role: approved canon source
-    - confidence: observed
-      source_role: canon candidate
-      request_context: clearly_declared_as_canon
+      approval_status: approved
+      user_answers_provenance: exists
+      evidence_refs: min_count 1
   provisional_constraints_when:
     - confidence: observed
       source_role: reference image
@@ -109,6 +147,8 @@ confirmation_gate:
       request_context: not_yet_approved
     - confidence: inferred
     - confidence: low_confidence
+    - approval_status: pending_user_approval
+    - approval_status: keep_provisional
   unresolved_questions_when:
     - confidence: needs_confirmation
     - source_role_conflict: true
@@ -122,6 +162,16 @@ confirmed
 provisional
 unresolved
 rejected
+```
+
+Use `approval_status` separately from `canon_status`:
+
+```text
+pending_user_approval
+approved
+rejected
+revised
+keep_provisional
 ```
 
 Use left/right labels from the subject's body, not the viewer's screen:
@@ -313,20 +363,23 @@ Ask only questions that change the canon:
 5. Should the distorted action pose be excluded from proportion measurements?
 ```
 
-If the user does not answer and work must continue, mark the field as `needs_confirmation` and keep it out of `immutable`.
+If the user does not answer, mark the field as `needs_confirmation`, keep it out of `immutable`, and continue with a provisional ontology plus `$imagegen` prompt pack when safe.
 
 Use `question_queue` instead of bare questions when answers affect canon state:
 
 ```yaml
 clarification_gate:
-  status: waiting_for_user
-  reason: canon_candidate_not_yet_approved
+  status: proceeding_with_provisional
+  reason: canon_candidate_not_yet_approved_but_safe_for_provisional_handoff
+  mode: immediate_provisional_progression
+  hard_stop: false
 
 question_queue:
   - id: Q_Byuli_001
     question: Image_Byuli_001을 approved canon source로 승격할까요?
     type: canon_source_approval
-    blocking: true
+    blocking_for_ready: true
+    blocking_for_provisional: false
     affects:
       - canon_assertions.*.source_role
       - canon_assertions.*.canon_status
@@ -335,7 +388,7 @@ question_queue:
     default_if_unanswered: keep_provisional
 ```
 
-If a blocking question prevents a ready handoff, ask the queue in chat and stop. Continue only after the user answers or explicitly accepts a provisional handoff.
+If a question prevents only a ready handoff, ask the queue in chat and continue with `Handoff status: provisional`. Stop only when `hard_stop: true`, such as no usable canon candidate, conflicting identity-critical sources, or a user request for confirmed-only output.
 
 ## User Answer Application
 
@@ -345,6 +398,7 @@ When the user replies, convert the answer into provenance before recomputing the
 user_answers:
   - id: UA_Byuli_001
     answers_question: Q_Byuli_001
+    applies_to_assertion: ASSERT_Byuli_001
     value: keep_as_candidate
     asserted_by: user
     confidence: user_confirmed
@@ -352,10 +406,10 @@ user_answers:
 ```
 
 Then update affected assertions and handoff fields:
-- `approve_as_canon` promotes matching observed assertions to `canon_status: confirmed`.
+- `approve_as_canon` or approval-payload `approve` promotes matching observed assertions to `approval_status: approved`, `confidence: user_confirmed`, and `canon_status: confirmed`.
 - `keep_as_candidate` leaves matching observed assertions in `Provisional constraints`.
 - `reference_only` keeps the image out of `immutable` and hard `$imagegen` constraints.
-- `exact_text_required` may populate `Text (verbatim)` and `Confirmed constraints`.
+- `exact_text_required` may populate `Text (verbatim)`; it enters `Confirmed constraints` only after the linked assertion is approved.
 
 ## `$imagegen` Handoff
 
@@ -370,8 +424,9 @@ Also include execution and certainty fields:
 ```text
 Handoff status: <ready | provisional | blocked>
 Imagegen execution: mode=<generate | edit>; input_roles=<reference image/edit target/style reference>; output_aspect=<ratio or size>; transparent_required=<true | false>; variants=<count>; postprocess=<none | chroma-key removal | native transparency fallback>
-Confirmed constraints: <user-confirmed canon, observed facts from approved canon sources, or observed canon-candidate facts when the request clearly declares the source as canon>
+Confirmed constraints: <assertions with approval_status approved and user_answers provenance only>
 Provisional constraints: <inferred or low-confidence guidance>
+Generation constraints: <request-local technical constraints, not canon>
 Unresolved questions: <needs_confirmation items and canon blockers>
 ```
 
@@ -381,7 +436,8 @@ Use this handoff status matrix:
 
 ```yaml
 ready:
-  - all identity-critical assertions are confirmed
+  - all identity-critical assertions are confirmed through approval_status: approved
+  - canon_lock_state is locked or no canon lock is required for the requested artifact
   - no required view/proportion dimensions are missing
 provisional:
   - one usable canon candidate exists but is not yet approved
@@ -415,12 +471,20 @@ canon_assertions:
     subject: CHR_001
     predicate: hasEyeColor
     object: pale_gold
+    assertion_version: 1
+    value_hash: hash_of_subject_predicate_object_v1
+    evidence_refs:
+      - EV_001
+    retrieval_scope: current_conversation_only
     source_image_id: Image_001
     source_role: approved canon source
-    confidence: observed
+    confidence: user_confirmed
     canon_status: confirmed
+    approval_status: approved
     asserted_by: visual-canon-builder
-    derived_from: image_analysis_001
+    derived_from:
+      - image_analysis_001
+      - UA_001
     needs_confirmation: false
   - id: ASSERT_002
     subject: CHR_001

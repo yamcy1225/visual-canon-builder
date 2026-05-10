@@ -1,6 +1,6 @@
 ---
 name: visual-canon-builder
-description: Build imagegen-ready visual canon kits from character, faction, worldbuilding, costume, item, environment, game-asset notes, or one or more reference images. Use when Codex needs to analyze visual references, ask canon-critical clarification questions, document observed visual facts, create a lightweight visual knowledge graph with provenance, validation shapes, proportion/view-projection rules, and produce safe `$imagegen` prompt packs without directly generating images.
+description: Build imagegen-ready visual canon kits from character, faction, worldbuilding, costume, item, environment, game-asset notes, or one or more reference images. Use when Codex needs to analyze visual references, run an evidence interview before canon lock, ask canon-critical clarification questions, document observed visual facts, create a lightweight visual knowledge graph with provenance, validation shapes, proportion/view-projection rules, and produce safe `$imagegen` prompt packs without directly generating images.
 ---
 
 # Visual Canon Builder
@@ -17,11 +17,14 @@ This is a lightweight ontology-inspired skill, not a full RDF/OWL/SHACL implemen
 
 1. Identify the asset target: character, faction, costume, item, environment, UI icon set, skill effect, sprite, or scene.
 2. If images are provided, create an `Image Inventory` first. If the user gives local image paths, inspect them before analysis; if images are already attached, analyze them directly.
-3. Extract canon rules from notes and images:
+3. Before locking canon, run Evidence Interview Mode: split current conversation inputs into `Evidence Cards`, connect them to `Candidate Assertions`, emit an `Approval Review Pack`, and require explicit user approval before any candidate assertion becomes `confirmed`.
+4. Extract canon rules from notes and images:
    - `immutable`: must never change.
    - `allowed_variation`: can change by scene, pose, season, damage, emotion, camera, or asset type.
    - `forbidden`: must not appear.
    - `canon_references`: approved reference images, sheets, palettes, or notes.
+   - `evidence_cards`: current-conversation image/note snippets used as temporary RAG evidence.
+   - `retrieval_trace`: links from evidence cards to candidate assertions.
    - `semantic_mapping`: mapping from YAML fields to class, individual, property, relation, constraint, and provenance concepts.
    - `relations`: graph-like subject/predicate/object triples such as `Image_001 depicts CHR_001`.
    - `canon_assertions`: individual claims with source, confidence, and confirmation state.
@@ -29,13 +32,13 @@ This is a lightweight ontology-inspired skill, not a full RDF/OWL/SHACL implemen
    - `view_spec`: requested view angle and camera constraints.
    - `validation_shapes`: SHACL-like rules with target, path, constraint, severity, and message.
    - `imagegen_execution`: downstream `$imagegen` mode, input roles, output requirements, and handoff status.
-4. Separate observed facts from inference. Mark hidden, ambiguous, or conflicting details as `needs_confirmation` instead of inventing them.
-5. Ask only canon-critical clarification questions through the Interactive Clarification Loop: create a `question_queue` with stable IDs, mark each question `blocking` or `non_blocking`, and stop for user input when blocking questions prevent a ready handoff.
-6. Write a compact visual ontology with English keys and Korean-friendly values/examples.
-7. Compile one or more `$imagegen` prompt packs using the schema below. Put only confirmed canon assertions in `Confirmed constraints`; keep uncertain, inferred, role-ambiguous, or source-ambiguous facts in `Provisional constraints` or `Unresolved questions`.
-8. Add a validation checklist and canon promotion rule so generated images do not become canon automatically.
+5. Separate observed facts from inference. Mark hidden, ambiguous, unapproved, or conflicting details as `needs_confirmation`, `pending_user_approval`, or `keep_provisional` instead of inventing or prematurely confirming them.
+6. Ask only canon-critical clarification questions through the Interactive Clarification Loop: create a `question_queue` with stable IDs, mark each question `blocking_for_ready` and `blocking_for_provisional`, then continue with a provisional ontology and `$imagegen` prompt pack unless a hard-stop condition applies.
+7. Write a compact visual ontology with English keys and Korean-friendly values/examples.
+8. Compile one or more `$imagegen` prompt packs using the schema below. Put only user-approved canon assertions in `Confirmed constraints`; keep pending, inferred, role-ambiguous, or source-ambiguous facts in `Provisional constraints` or `Unresolved questions`.
+9. Add a validation checklist and canon promotion rule so generated images do not become canon automatically.
 
-For fuller copy/paste templates, read `references/visual-canon-template.md`. For image-to-canon analysis, read `references/image-analysis-to-canon.md`. For semantic mapping, assertion provenance, and shape rules, read `references/semantic-canon-model.md`. For question/answer loops, read `references/interactive-clarification-loop.md`. For regression goals and manual sample tests, read `references/v3.2-goals-and-manual-tests.md`.
+For fuller copy/paste templates, read `references/visual-canon-template.md`. For image-to-canon analysis, read `references/image-analysis-to-canon.md`. For evidence interview RAG mode, read `references/evidence-interview-rag.md`. For semantic mapping, assertion provenance, and shape rules, read `references/semantic-canon-model.md`. For question/answer loops, read `references/interactive-clarification-loop.md`. For regression goals and manual sample tests, read `references/v3.4-goals-and-manual-tests.md`.
 
 ## Image Analysis To Canon
 
@@ -52,9 +55,17 @@ Do not treat a stylized or perspective-distorted image as a measurement source u
 
 Image roles gate canon promotion. Repetition alone is not enough: repeated details in two `style reference` images must not outrank a single declared `canon candidate`. If image roles conflict or are unknown, keep the affected facts out of `immutable` and ask.
 
+## Evidence Interview Mode
+
+Run this before final canon lock. Treat the current conversation as the retrieval corpus: attached images, local image analyses, and user notes become temporary RAG sources. Do not create a vector DB, local UI, or persistent store in v3.4.
+
+Output `Evidence Cards`, `Retrieval Trace`, `Approval Review Pack`, `Approval Payload`, and `Lock Summary`. Every candidate assertion must include `evidence_refs`, `approval_status`, and `retrieval_scope: current_conversation_only`. Before approval, assertions stay `provisional` or `unresolved`; final `confirmed` requires `approval_status: approved`, evidence, matching version/hash, and `user_answers` provenance.
+
 ## Interactive Clarification Loop
 
-When questions are needed, do not only list them. Emit a `question_queue` with up to 5 stable IDs, `blocking` status, affected fields, and `default_if_unanswered`. If any blocking question prevents `ready`, set `clarification_gate: waiting_for_user`, ask those questions in chat, and stop before final `$imagegen` handoff.
+When questions are needed, do not only list them and do not default to a ping-pong stop. Emit a `question_queue` with up to 5 stable IDs, `blocking_for_ready`, `blocking_for_provisional`, affected fields, and `default_if_unanswered`. Set `clarification_gate.status: proceeding_with_provisional` and produce the provisional ontology plus `$imagegen` Prompt Pack immediately when a safe provisional draft is possible.
+
+Only set `clarification_gate.status: waiting_for_user` and stop when `hard_stop: true`, such as when there is no usable canon candidate, identity-critical sources conflict, required exact text cannot be safely omitted, or the user explicitly asks for confirmed-only output before any handoff.
 
 When the user answers, create `user_answers` provenance records, link them to affected `canon_assertions`, recompute `canon_status`, `Handoff status`, `Confirmed constraints`, `Provisional constraints`, and `Unresolved questions`, then return the updated ontology and prompt pack.
 
@@ -66,11 +77,9 @@ Treat `observed` and `confirmed canon` as different states:
 confirmation_gate:
   confirmed_when:
     - confidence: user_confirmed
-    - confidence: observed
-      source_role: approved canon source
-    - confidence: observed
-      source_role: canon candidate
-      request_context: clearly_declared_as_canon
+      approval_status: approved
+      user_answers_provenance: exists
+      evidence_refs: min_count 1
   provisional_when:
     - confidence: observed
       source_role: reference image
@@ -79,6 +88,8 @@ confirmation_gate:
       request_context: not_yet_approved
     - confidence: inferred
     - confidence: low_confidence
+    - approval_status: pending_user_approval
+    - approval_status: keep_provisional
   blocked_when:
     - identity_critical_conflict_unresolved
     - left_right_asymmetry_conflict_unresolved
@@ -91,7 +102,8 @@ Set `$imagegen` handoff status from canon risk:
 ```yaml
 handoff_status_rules:
   ready:
-    - all identity-critical assertions are confirmed
+    - all identity-critical assertions are confirmed through approval_status: approved
+    - canon_lock_state is locked or no canon lock is required for the requested artifact
     - all required view/proportion locks are confirmed or not needed
     - no reject or blocked validation shape is unresolved
   provisional:
@@ -116,7 +128,7 @@ semantic_mapping:
   property: nested visual/proportion/style fields
   relation: subject-predicate-object records under relations
   constraint: validation_shapes
-  provenance: canon_assertions source/confidence fields
+  provenance: canon_assertions source/confidence/evidence_refs/approval_status/user_answers/retrieval_scope fields
 ```
 
 Use `relations` when a fact connects entities:
@@ -144,10 +156,16 @@ canon_assertions:
     object: pale_gold
     source_image_id: Image_001
     source_role: approved canon source
-    confidence: observed
+    confidence: user_confirmed
     canon_status: confirmed
+    approval_status: approved
+    evidence_refs:
+      - EV_001
+    retrieval_scope: current_conversation_only
     asserted_by: visual-canon-builder
-    derived_from: image_analysis_001
+    derived_from:
+      - image_analysis_001
+      - UA_001
     needs_confirmation: false
 ```
 
@@ -217,12 +235,20 @@ canon_assertions:
     subject: CHR_001
     predicate: hasEyeColor
     object: pale_gold
+    assertion_version: 1
+    value_hash: hash_of_subject_predicate_object_v1
+    evidence_refs:
+      - EV_001
+    retrieval_scope: current_conversation_only
     source_image_id: Image_001
     source_role: approved canon source
-    confidence: observed
+    confidence: user_confirmed
     canon_status: confirmed
+    approval_status: approved
     asserted_by: visual-canon-builder
-    derived_from: image_analysis_001
+    derived_from:
+      - image_analysis_001
+      - UA_001
     needs_confirmation: false
   - id: ASSERT_002
     subject: CHR_001
@@ -406,30 +432,20 @@ Lighting/mood: <lighting and tone>
 Color palette: <canon palette>
 Materials/textures: <cloth, metal, skin, hair, prop materials>
 Text (verbatim): "<exact text if needed>"
-Confirmed constraints: <user-confirmed canon, approved-canon-source facts, or clearly declared canon-candidate facts only>
+Confirmed constraints: <assertions with approval_status approved and user_answers provenance only>
 Provisional constraints: <useful but unresolved details; label source role and do not present as hard canon>
+Generation constraints: <request-local technical constraints that are not canon, such as chroma-key, padding, or no-shadow requirements>
 Unresolved questions: <canon-critical blockers or needs_confirmation items>
 Avoid: <confirmed forbidden rules, request-local prohibitions, drift risks, watermark, unwanted text>
 ```
 
 If canon-critical conflicts remain, set `Handoff status` to `blocked` or `provisional`. Never move unresolved details into `Confirmed constraints`; keep them in `Provisional constraints` or `Unresolved questions`.
 
-Descriptive prompt fields such as `Subject`, `Style/medium`, `Color palette`, and `Materials/textures` may summarize provisional image evidence, but they must label it as provisional or reference-derived when it is not confirmed. Reserve `Text (verbatim)` for text the user explicitly requested, user-confirmed, or supplied by an approved canon source; otherwise put visible but unconfirmed text in `Provisional constraints` and ask. Reserve `Avoid` for confirmed forbidden drift or request-local exclusions, not for locking unresolved canon.
+Descriptive prompt fields such as `Subject`, `Style/medium`, `Color palette`, and `Materials/textures` may summarize provisional image evidence, but they must label it as provisional or reference-derived when it is not confirmed. Reserve `Text (verbatim)` for text attached to approved assertions; otherwise put visible but unconfirmed text in `Provisional constraints` and ask. Reserve `Avoid` for confirmed forbidden drift or request-local exclusions, not for locking unresolved canon.
 
-For proportion-critical requests, compute `derived_projected_widths` per landmark or silhouette envelope from the canon measurement model:
+For proportion-critical requests, compute `derived_projected_widths = abs(front_width * cos(yaw)) + abs(side_depth * sin(yaw))` separately for head, shoulder, torso, hip, and costume/accessory envelopes. Use `orthographic`, `neutral camera height`, and `no wide-angle distortion` for reference sheets; for dynamic scenes, phrase the lock as "maintain canon proportions with low-distortion perspective" rather than forcing exact sheet measurements.
 
-```text
-projected_width = abs(front_width * cos(yaw)) + abs(side_depth * sin(yaw))
-front yaw 0: projected_width = front_width
-side yaw 90: projected_width = side_depth
-three-quarter yaw 45: projected_width = 0.707 * front_width + 0.707 * side_depth
-```
-
-Run the formula separately for head, shoulder, torso, hip, and costume/accessory envelopes when those dimensions matter. Use `orthographic`, `neutral camera height`, and `no wide-angle distortion` for reference sheets and turnarounds. For dynamic scenes, phrase the lock as "maintain canon proportions with low-distortion perspective" rather than forcing exact sheet measurements.
-
-Use active `$imagegen` taxonomy slugs when they fit. If the active taxonomy is unavailable, use a plain use-case label and avoid claiming the slug is current. Examples that were current at authoring time:
-- Generate: `photorealistic-natural`, `product-mockup`, `ui-mockup`, `infographic-diagram`, `scientific-educational`, `ads-marketing`, `productivity-visual`, `logo-brand`, `illustration-story`, `stylized-concept`, `historical-scene`.
-- Edit: `text-localization`, `identity-preserve`, `precise-object-edit`, `lighting-weather`, `background-extraction`, `style-transfer`, `compositing`, `sketch-to-render`.
+Use active `$imagegen` taxonomy slugs when they fit; if unavailable, use a plain use-case label and avoid claiming the slug is current.
 
 ## Chroma-Key Cutout Guidance
 
@@ -437,7 +453,7 @@ For sprite or transparent-background requests, prepare the prompt for `$imagegen
 
 ```text
 Scene/backdrop: flat solid #00ff00 background; perfectly uniform chroma-key field for background removal
-Confirmed constraints: full subject visible, crisp separated edges, generous padding, no cast shadow, no contact shadow, no reflection, no background texture, do not use #00ff00 anywhere in the subject
+Generation constraints: full subject visible, crisp separated edges, generous padding, no cast shadow, no contact shadow, no reflection, no background texture, do not use #00ff00 anywhere in the subject
 Avoid: shadows, floor plane, gradients, key-color clothing or effects, watermark, extra text
 ```
 
@@ -467,19 +483,10 @@ generated -> reviewed -> corrected -> approved -> canon
 Do not treat a generated image as canon just because it looks good. Only approved outputs can enter `canon_references`; rejected outputs can be kept as `forbidden examples` when useful.
 
 ## Output Contract
-
 Return these sections unless the user asks for a narrower artifact:
 
-1. `Image Inventory` when images are provided
-2. `Observed Visual Facts` when images are provided
-3. `Conflicts And Unknowns` when anything is hidden, contradictory, or uncertain
-4. `Question Queue` and `Clarification Gate` when canon-critical decisions need input
-5. `User Answer Provenance` when applying user replies
-6. `Visual Canon Ontology`
-7. `Semantic Relations And Provenance`
-8. `Validation Shapes`
-9. `$imagegen Prompt Pack`
-10. `Validation Checklist`
-11. `Canon Promotion Notes`
+1. Source/evidence and analysis: `Image Inventory`, `Evidence Cards`, `Retrieval Trace`, `Approval Review Pack`, `Approval Payload`, `Lock Summary`, `Observed Visual Facts`, `Conflicts And Unknowns`, `Question Queue`, and `Clarification Gate`.
+2. Approval/canon: `User Answer Provenance` when applying replies, `Visual Canon Ontology`, `Semantic Relations And Provenance`, and `Validation Shapes`.
+3. Handoff: `$imagegen Prompt Pack`, `Validation Checklist`, and `Canon Promotion Notes`.
 
 Keep outputs concise enough to be pasted into `$imagegen`, but include all immutable and forbidden rules needed to prevent visual drift.

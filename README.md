@@ -1,11 +1,12 @@
 # Visual Canon Builder
 
-`visual-canon-builder` is a Codex skill for turning character notes, worldbuilding notes, and reference images into an imagegen-ready visual canon kit.
+`visual-canon-builder` is a Codex skill for turning character notes, worldbuilding notes, and reference images into an imagegen-ready visual canon kit with evidence-backed approval before final canon lock.
 
 It does not generate images directly. It prepares:
 
 - visual canon ontology
 - image inventory and observed visual facts
+- evidence cards, retrieval traces, and batch approval payloads
 - semantic relations and provenance-backed assertions
 - proportion and view-projection rules
 - validation shapes and checklists
@@ -20,9 +21,10 @@ It does not generate images directly. It prepares:
 │   └── openai.yaml
 └── references/
     ├── image-analysis-to-canon.md
+    ├── evidence-interview-rag.md
     ├── interactive-clarification-loop.md
     ├── semantic-canon-model.md
-    ├── v3.2-goals-and-manual-tests.md
+    ├── v3.4-goals-and-manual-tests.md
     └── visual-canon-template.md
 ```
 
@@ -92,6 +94,10 @@ Use $visual-canon-builder to analyze these three character references and identi
 ```
 
 ```text
+Use $visual-canon-builder to run an evidence interview on this character sheet before locking the final canon.
+```
+
+```text
 Use $visual-canon-builder to create a faction visual canon ontology and a safe $imagegen prompt pack.
 ```
 
@@ -104,6 +110,11 @@ Use $visual-canon-builder to prepare a sprite cutout prompt pack with proportion
 The skill is designed to produce:
 
 - `Image Inventory`
+- `Evidence Cards`
+- `Retrieval Trace`
+- `Approval Review Pack`
+- `Approval Payload`
+- `Lock Summary`
 - `Observed Visual Facts`
 - `Conflicts And Unknowns`
 - `Question Queue`
@@ -116,12 +127,13 @@ The skill is designed to produce:
 - `Validation Checklist`
 - `Canon Promotion Notes`
 
-Unconfirmed image-derived facts stay in `needs_confirmation`, `Provisional constraints`, or `Unresolved questions`. They should not be promoted into hard `$imagegen` constraints.
+Unconfirmed image-derived facts stay in `needs_confirmation`, `pending_user_approval`, `Provisional constraints`, or `Unresolved questions`. They should not be promoted into hard `$imagegen` constraints.
 
 ## Notes
 
 - This is a lightweight ontology-inspired skill, not a full RDF/OWL/SHACL engine.
 - The skill delegates actual image generation to `$imagegen`.
 - The proportion projection model is an approximate orthographic envelope estimate, not a full 3D reconstruction.
-- Blocking canon questions are handled through `question_queue` and `user_answers` before ready handoff.
-- `references/v3.2-goals-and-manual-tests.md` records the current hardening goals and a Byuli character-sheet manual golden test.
+- Canon questions are handled through `question_queue` and `user_answers`; unanswered ready-blocking questions no longer stop provisional output.
+- Evidence Interview RAG Mode uses only current conversation inputs by default; it does not create a vector DB or separate click UI.
+- `references/v3.4-goals-and-manual-tests.md` records the current hardening goals and character-sheet manual golden tests.

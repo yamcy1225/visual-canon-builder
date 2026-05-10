@@ -7,6 +7,7 @@ Use these templates when `$visual-canon-builder` needs a fuller reusable structu
 - Character Canon Ontology
 - Faction Or World Canon Ontology
 - Semantic Relations And Provenance
+- Evidence Interview RAG Mode
 - Interactive Clarification Loop
 - Projection Rules Template
 - Validation Shapes
@@ -80,28 +81,108 @@ relations:
     predicate: <relation predicate>
     object: <entity id or value>
 
+source_inventory:
+  retrieval_scope: current_conversation_only
+  sources:
+    - id: <SRC_001>
+      type: <attached_image | local_image | user_note>
+      role: <canon candidate | reference image | instruction>
+      description: <short source description>
+
+evidence_cards:
+  - id: <EV_001>
+    source_id: <SRC_001>
+    modality: <image | text | mixed>
+    region_or_note: <visible region, crop description, or note span>
+    source_anchor: <image label, page, message id, or note id>
+    view_label: <front | side | back | expression | prop | text_note | mixed>
+    bbox_or_region: <pixel bbox, crop id, or descriptive_region_no_pixel_bbox>
+    source_text_span: <quoted note span or null>
+    observation: <directly observed fact>
+    confidence: <observed | inferred | low_confidence | needs_confirmation>
+    usable_for:
+      - <identity | proportion | costume | prop | style | text>
+    limitations:
+      - <what this evidence cannot prove>
+
 canon_assertions:
   - id: ASSERT_001
     subject: <entity id>
     predicate: <property or relation>
     object: <value>
+    assertion_version: <integer>
+    value_hash: <stable hash or short fingerprint of subject/predicate/object>
+    evidence_refs:
+      - <EV_001>
+    retrieval_scope: current_conversation_only
     source_image_id: <Image id or user_answer id>
     source_role: <approved canon source | canon candidate | reference image | variant | style reference | user confirmation>
     confidence: <observed | inferred | low_confidence | needs_confirmation | user_confirmed>
     canon_status: <confirmed | provisional | unresolved | rejected>
+    approval_status: <pending_user_approval | approved | rejected | revised | keep_provisional>
     asserted_by: visual-canon-builder
     derived_from: <analysis id or question id>
     needs_confirmation: <true | false>
 
+retrieval_trace:
+  - assertion_id: <ASSERT_001>
+    evidence_refs:
+      - <EV_001>
+    rationale: <why the evidence supports this assertion>
+
+approval_review_pack:
+  review_pack_id: <REVIEW_001>
+  entity_id: <entity id>
+  canon_lock_state: <unlocked | partially_locked | locked>
+  derived_lock_state: true
+  bulk_actions:
+    - <approve_all_low_risk | keep_all_optional_provisional>
+  items:
+    - assertion_id: <ASSERT_001>
+      assertion_version: <integer>
+      value_hash: <stable hash or short fingerprint>
+      evidence_refs:
+        - <EV_001>
+      current_value: <value to approve>
+      recommended_action: <approve | reject | revise | keep_provisional>
+      risk_tier: <identity_critical | canon_critical | optional | style_only>
+      risk_if_wrong: <identity drift, text drift, proportion drift, etc>
+
+approval_payload:
+  review_pack_id: <REVIEW_001>
+  applies_to: <entity id>
+  answer_mode: batch
+  decisions:
+    - assertion_id: <ASSERT_001>
+      expected_assertion_version: <integer>
+      expected_value_hash: <stable hash or short fingerprint>
+      action: <approve | reject | revise | keep_provisional>
+      revised_value: <new value or null>
+      replacement_assertion_id: <ASSERT_002 or null>
+      note: <optional note>
+
+lock_summary:
+  canon_lock_state: <unlocked | partially_locked | locked>
+  derived_from_assertion_status: true
+  pending: <count>
+  approved: <count>
+  rejected: <count>
+  revised: <count>
+  keep_provisional: <count>
+  ready_for_final_canon: <true | false>
+
 clarification_gate:
-  status: <none | waiting_for_user | resolved>
+  status: <none | proceeding_with_provisional | waiting_for_user | resolved>
   reason: <why answers are needed or none>
+  mode: <immediate_provisional_progression | hard_stop_wait | resolved>
+  hard_stop: <true | false>
 
 question_queue:
   - id: <Q_001>
     question: <canon-critical user question>
     type: <canon_source_approval | variant_or_drift | exact_text | prop_permanence | measurement_source | forbidden_rule>
-    blocking: <true | false>
+    blocking_for_ready: <true | false>
+    blocking_for_provisional: <true | false>
     affects:
       - <field or assertion id>
     required_for:
@@ -111,6 +192,7 @@ question_queue:
 user_answers:
   - id: <UA_001>
     answers_question: <Q_001>
+    applies_to_assertion: <ASSERT_001>
     value: <user answer>
     asserted_by: user
     confidence: user_confirmed
@@ -371,7 +453,7 @@ relations:
   - subject: CHR_001_Winter
     predicate: variantOf
     object: CHR_001
-  - subject: Approval_001
+  - subject: UA_Approval_001
     predicate: approves
     object: ASSERT_001
 
@@ -382,10 +464,16 @@ canon_assertions:
     object: pale_gold
     source_image_id: Image_001
     source_role: approved canon source
-    confidence: observed
+    confidence: user_confirmed
     canon_status: confirmed
+    approval_status: approved
+    evidence_refs:
+      - EV_001
+    retrieval_scope: current_conversation_only
     asserted_by: visual-canon-builder
-    derived_from: image_analysis_001
+    derived_from:
+      - image_analysis_001
+      - UA_Approval_001
     needs_confirmation: false
 ```
 
@@ -398,23 +486,26 @@ semantic_mapping:
   property: nested visual/proportion/style fields
   relation: relations subject-predicate-object records
   constraint: validation_shapes
-  provenance: canon_assertions source/confidence fields
+  provenance: canon_assertions source/confidence/evidence_refs/approval_status fields
 ```
 
 ## Interactive Clarification Loop
 
-Use this when canon-critical decisions require user input before a ready handoff.
+Use this when canon-critical decisions require user input before a ready handoff. By default, continue with a provisional ontology and prompt pack unless `hard_stop: true`.
 
 ```yaml
 clarification_gate:
-  status: waiting_for_user
-  reason: blocking_questions_prevent_ready_handoff
+  status: proceeding_with_provisional
+  reason: blocking_questions_prevent_ready_but_not_provisional_handoff
+  mode: immediate_provisional_progression
+  hard_stop: false
 
 question_queue:
   - id: Q_001
     question: Which image is the approved canon source?
     type: canon_source_approval
-    blocking: true
+    blocking_for_ready: true
+    blocking_for_provisional: false
     affects:
       - canon_assertions.*.source_role
       - Confirmed constraints
@@ -511,6 +602,21 @@ validation_shapes:
     constraint: equals subject_left_subject_right
     severity: fix
     message: 좌우 비대칭 표식은 subject_left/subject_right 기준으로 기록한다.
+  - target: canon_assertions[*]
+    path: canon_status
+    constraint: if equals confirmed then approval_status equals approved and user_answers provenance exists
+    severity: reject
+    message: confirmed assertion은 approved 상태와 사용자 승인 provenance 없이는 허용되지 않는다.
+  - target: canon_assertions[*]
+    path: evidence_refs
+    constraint: min_count 1
+    severity: reject
+    message: 모든 candidate assertion은 최소 하나의 evidence card를 참조해야 한다.
+  - target: approval_payload.decisions[*]
+    path: expected_value_hash
+    constraint: equals current assertion value_hash
+    severity: blocked
+    message: 오래된 approval payload로 정본을 잠그지 않는다.
 ```
 
 ## Handoff Status Rules
@@ -518,7 +624,8 @@ validation_shapes:
 ```yaml
 handoff_status_rules:
   ready:
-    - all identity-critical assertions are confirmed
+    - all identity-critical assertions are confirmed through approval_status: approved
+    - canon_lock_state is locked or no canon lock is required for the requested artifact
     - canon source, required text, palette, left/right details, and required proportions are resolved
     - no reject or blocked validation shape is unresolved
   provisional:
@@ -550,8 +657,9 @@ Lighting/mood: <lighting and emotion>
 Color palette: <canon palette>
 Materials/textures: <canon materials>
 Text (verbatim): "<exact text, if any>"
-Confirmed constraints: <user-confirmed canon, approved-canon-source facts, or clearly declared canon-candidate facts only>
+Confirmed constraints: <assertions with approval_status approved and user_answers provenance only>
 Provisional constraints: <useful but unresolved details; label source role and do not present as hard canon>
+Generation constraints: <request-local technical constraints that are not canon, such as chroma-key, padding, or no-shadow requirements>
 Unresolved questions: <canon-critical blockers or needs_confirmation items>
 Avoid: <confirmed forbidden rules, request-local prohibitions, drift risks, watermark, unwanted text>
 ```
@@ -562,7 +670,7 @@ Use this add-on when the intended result is a sprite, sticker, item cutout, tran
 
 ```text
 Scene/backdrop: flat solid #00ff00 background; perfectly uniform chroma-key field for background removal
-Confirmed constraints: full subject visible, crisp separated edges, generous padding, no cast shadow, no contact shadow, no reflection, no background texture, do not use #00ff00 anywhere in the subject
+Generation constraints: full subject visible, crisp separated edges, generous padding, no cast shadow, no contact shadow, no reflection, no background texture, do not use #00ff00 anywhere in the subject
 Avoid: shadows, floor plane, gradients, key-color clothing or effects, watermark, extra text
 ```
 
@@ -589,7 +697,8 @@ Avoid: shadows, floor plane, gradients, key-color clothing or effects, watermark
 - 다른 캐릭터나 세력의 시각 언어가 섞이지 않았는가?
 
 [Imagegen Prompt Check]
-- `Confirmed constraints`에는 확인된 immutable 규칙만 들어갔는가?
+- `Confirmed constraints`에는 approved assertion과 user_answers provenance가 있는 정본 규칙만 들어갔는가?
+- `Generation constraints`에는 chroma-key, padding, no-shadow 같은 요청-local 기술 조건만 들어갔는가?
 - 미확정 요소가 `Provisional constraints` 또는 `Unresolved questions`에 남아 있는가?
 - `Avoid`에 모든 forbidden 규칙이 들어갔는가?
 - 레퍼런스 이미지 역할이 `reference image`, `edit target`, `style reference`처럼 명확한가?
