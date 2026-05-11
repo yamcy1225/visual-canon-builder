@@ -1,0 +1,45 @@
+{
+  "evaluation_result": {
+    "id": "EVAL_SampleSkate_Skateboard_Fail_001",
+    "generated_image_id": "GENIMG_SampleSkate_Skateboard_001",
+    "compared_against": {
+      "identity_anchor": "CROP_SampleSkate_FrontFullBody_001",
+      "style_anchor": "Image_001",
+      "generation_contract": "GEN_SampleSkate_001"
+    },
+    "classification": "reject",
+    "confidence": "high",
+    "summary": "Reject: eye construction is off-model, visible hands have four total digits, and the skateboard is stretched beyond source prop proportions.",
+    "checks": {
+      "identity_pass": "partial",
+      "style_pass": true,
+      "proportion_pass": false,
+      "semantic_pass": false,
+      "composition_pass": "partial",
+      "eye_construction_pass": false,
+      "star_pupil_pass": false,
+      "hand_digit_count_pass": false,
+      "skateboard_proportion_pass": false
+    },
+    "drift_patterns": [
+      "eye_construction_changed",
+      "star_pupil_missing_or_warped",
+      "wrong_hand_digit_count",
+      "board_length_invalid",
+      "skateboard_proportion_invalid"
+    ],
+    "prompt_patch": {
+      "id": "PATCH_SampleSkate_Skateboard_001",
+      "apply_to_next_prompt": true,
+      "instructions": [
+        "Restore SampleSkate's original eye construction: black oval eyes with crisp white five-point star highlights and intact eyelid arcs.",
+        "Every visible hand must show four rounded fingers plus one thumb.",
+        "Use the source skateboard proportions: normal short skateboard deck, rounded nose/tail, not a longboard or stretched platform."
+      ]
+    },
+    "forbidden_example_candidate": {
+      "use_as_forbidden_example": true,
+      "reason": "Useful negative example for eye, hand digit, and skateboard proportion drift."
+    }
+  }
+}

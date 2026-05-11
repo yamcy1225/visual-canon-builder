@@ -9,9 +9,11 @@ It does not generate images directly. It prepares:
 - evidence cards, retrieval traces, guided approval questions, quick approval reviews, and batch approval payloads
 - semantic relations and provenance-backed assertions
 - identity canon, style canon, generation contracts, reference preservation, proportion, and view-projection rules
+- API execution profiles, source-cell manifests, and exact text/mask policies
 - evaluation loops, drift taxonomy, and targeted next-prompt patches
 - validation shapes and checklists
-- safe `$imagegen` edit/reference prompt packs
+- safe two-layer `$imagegen` edit/reference prompt packs
+- no-dependency operational scripts and contract fixtures
 
 ## Repository Layout
 
@@ -20,6 +22,18 @@ It does not generate images directly. It prepares:
 ├── SKILL.md
 ├── agents/
 │   └── openai.yaml
+├── assets/
+│   ├── approval_payload.schema.json
+│   ├── evaluation_result.schema.json
+│   ├── prompt_pack.schema.json
+│   └── visual_canon.schema.json
+├── scripts/
+│   ├── apply_approval_payload.py
+│   ├── build_prompt_pack.py
+│   ├── create_source_cell_manifest.py
+│   ├── run_generation_loop.py
+│   ├── score_generation_review.py
+│   └── validate_canon.py
 └── references/
     ├── image-analysis-to-canon.md
     ├── evidence-interview-rag.md
@@ -33,6 +47,14 @@ It does not generate images directly. It prepares:
     ├── v3.6-style-fidelity-tests.md
     ├── v3.7-reference-preserve-tests.md
     └── visual-canon-template.md
+
+tests/
+├── fixtures/
+│   ├── sample_approval.input.json
+│   ├── sample_approval.payload.json
+│   ├── sample_reference_preserve.input.json
+│   └── sample_style_drift.evaluation.json
+└── run_contract_tests.py
 ```
 
 The installable skill directory is:
@@ -72,6 +94,56 @@ cp -R visual-canon-builder/.codex/skills/visual-canon-builder "$PROJECT_SKILLS_D
 ```
 
 ## Validate
+
+Run the built-in operational contract tests:
+
+```bash
+python tests/run_contract_tests.py
+```
+
+Validate a canon artifact:
+
+```bash
+python .codex/skills/visual-canon-builder/scripts/validate_canon.py \
+  tests/fixtures/sample_reference_preserve.input.json
+```
+
+Build a two-layer prompt pack:
+
+```bash
+python .codex/skills/visual-canon-builder/scripts/build_prompt_pack.py \
+  tests/fixtures/sample_reference_preserve.input.json
+```
+
+Gate a generated candidate so only pass-classified images are promoted:
+
+```bash
+python .codex/skills/visual-canon-builder/scripts/score_generation_review.py \
+  tests/fixtures/sample_skateboard_fail.evaluation.json \
+  --profile mascot_skateboard \
+  --output-dir artifacts/sample_skate/skateboard-loop
+```
+
+If the image tool already exposed the candidates, use visible shortlist mode and offer only `shortlist/` candidates for user selection:
+
+```bash
+python .codex/skills/visual-canon-builder/scripts/score_generation_review.py \
+  tests/fixtures/sample_compact_jump_pass.evaluation.json \
+  --profile compact_mascot_identity \
+  --review-mode visible_shortlist \
+  --output-dir artifacts/sample_mascot/visible-shortlist
+```
+
+SampleMascot's strict profile also gates compact mascot proportions:
+
+```bash
+python .codex/skills/visual-canon-builder/scripts/score_generation_review.py \
+  tests/fixtures/sample_compact_jump_limb_fail.evaluation.json \
+  --profile compact_mascot_identity \
+  --output-dir artifacts/sample_mascot/jump-loop
+```
+
+For automatic regenerate-until-pass workflows, use `run_generation_loop.py` with a generator command that writes `{candidate}` and an evaluator command that writes `{evaluation}`. Failed candidates are copied to `rejected/`; only pass candidates are copied to `accepted/`.
 
 If Codex's `skill-creator` validator is available:
 
@@ -181,10 +253,13 @@ The skill is designed to produce:
 - `Validation Shapes`
 - `Style Canon`
 - `Generation Contract`
+- `API Execution Profile`
+- `Source Cell Asset Manifest`
+- `Exact Text Policy`
 - `Evaluation Result`
 - `Drift Patterns`
 - `Prompt Patch`
-- `$imagegen Prompt Pack`
+- `$imagegen Prompt Pack` with `technical_contract` and `final_imagegen_prompt`
 - `Validation Checklist`
 - `Canon Promotion Notes`
 
@@ -198,9 +273,13 @@ Unconfirmed image-derived facts stay in `needs_confirmation`, `pending_user_appr
 - Reference-sheet-derived mascot/cartoon assets should include a strict `Style fidelity lock` so `$imagegen` does not drift into semi-realistic or 3D-rendered output.
 - Identity-sensitive work should default to edit/reference-image handoff; text-only generation is for loose inspiration or no-reference cases.
 - Exact character-sheet reuse should include `Reference preserve mode` with a chosen source cell; identity-only similarity is not enough when proportions or style are redesigned.
-- When exact preservation is required, a cropped or isolated `source_cell_asset` should be used; a full multi-pose sheet alone should not be marked ready.
+- When exact preservation is required, a cropped or isolated `source_cell_asset` should be used and listed first in reference ordering; a full multi-pose sheet alone should not be marked ready.
+- API-ready prompt packs should specify `preferred_api`, `action`, `input_fidelity`, input ordering, mask policy, output format, and exact text fallback strategy.
+- `final_imagegen_prompt` should stay short and executable; keep the full ontology and provenance in `technical_contract`.
 - Generated outputs are reviewed through `evaluation_result`, `drift_patterns`, and `prompt_patch`; `pass` still requires user approval before canon promotion.
+- Pass-only workflows must not present every generated candidate as final. Generate to a work directory, evaluate, reject/regenerate on failure, and expose only `accepted/` candidates.
+- Character-specific strict profiles should include failure checks for known drift modes, such as star pupils and skateboard scale for SampleSkate, or arm/leg length and compact mascot ratio for SampleMascot.
 - Canon questions are handled through `question_queue` and `user_answers`; unanswered ready-blocking questions no longer stop provisional output.
 - Evidence Interview RAG Mode uses only current conversation inputs by default; it does not create a vector DB or separate click UI.
 - The first-screen UX should be decision-oriented; strict IDs, hashes, and full YAML remain available in technical sections.
-- `references/v3.4-goals-and-manual-tests.md` records the hardening goals, and `references/v3.5-ux-manual-tests.md` records the user-friendly approval tests.
+- `tests/run_contract_tests.py` turns the v3.4-v3.7 manual expectations into a small no-dependency regression surface.

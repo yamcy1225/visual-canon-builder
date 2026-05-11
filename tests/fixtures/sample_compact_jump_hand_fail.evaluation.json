@@ -1,0 +1,47 @@
+{
+  "evaluation_result": {
+    "id": "EVAL_SampleMascot_Jump_HandFail_001",
+    "generated_image_id": "GENIMG_SampleMascot_Jump_HandFail_001",
+    "compared_against": {
+      "identity_anchor": "CROP_SampleMascot_FrontFullBody_001",
+      "style_anchor": "CROP_SampleMascot_FrontFullBody_001",
+      "canon_version": "CHR_SampleMascot_v1.0.0",
+      "generation_contract": "GEN_SampleMascot_001"
+    },
+    "classification": "reject",
+    "confidence": "high",
+    "summary": "Reject: SampleMascot's visible hands are drawn as ambiguous fists or reduced digits instead of five readable digits per hand.",
+    "checks": {
+      "identity_pass": true,
+      "style_pass": true,
+      "proportion_pass": true,
+      "semantic_pass": true,
+      "character_identity_pass": true,
+      "eye_construction_pass": true,
+      "star_pupil_pass": true,
+      "eyelash_pass": true,
+      "hand_digit_count_pass": false,
+      "ear_shape_pass": true,
+      "compact_body_proportion_pass": true,
+      "arm_length_pass": true,
+      "leg_length_pass": true,
+      "limb_proportion_pass": true,
+      "exact_text_pass": true,
+      "shoe_and_sock_design_pass": true,
+      "source_sheet_style_pass": true
+    },
+    "drift_patterns": [
+      "wrong_hand_digit_count",
+      "hand_digit_count_wrong"
+    ],
+    "prompt_patch": {
+      "id": "PATCH_SampleMascot_Jump_HandFail_001",
+      "apply_to_next_prompt": true,
+      "instructions": [
+        "Reject ambiguous fists: make each visible hand an open cartoon glove hand with exactly five readable digits.",
+        "Draw one thumb plus four rounded fingers per visible hand; separate the digits clearly enough to count.",
+        "Keep the hands large enough to read, and do not hide fingers behind fists, sleeves, motion blur, or cropping."
+      ]
+    }
+  }
+}

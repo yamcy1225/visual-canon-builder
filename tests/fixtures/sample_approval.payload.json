@@ -1,0 +1,25 @@
+{
+  "approval_payload": {
+    "review_pack_id": "REVIEW_SampleMascot_001",
+    "applies_to": "CHR_SampleMascot",
+    "answer_mode": "batch",
+    "decisions": [
+      {
+        "assertion_id": "ASSERT_SampleMascot_StarPupils",
+        "expected_assertion_version": 1,
+        "expected_value_hash": "sha256:sample_mascot-star-pupils-v1",
+        "action": "approve",
+        "revised_value": null,
+        "note": "identity-critical repeated face feature"
+      },
+      {
+        "assertion_id": "ASSERT_SampleMascot_LongboardProp",
+        "expected_assertion_version": 1,
+        "expected_value_hash": "sha256:sample_mascot-longboard-v1",
+        "action": "keep_provisional",
+        "revised_value": null,
+        "note": "scene prop, not always carried"
+      }
+    ]
+  }
+}

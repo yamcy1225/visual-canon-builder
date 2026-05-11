@@ -140,6 +140,125 @@ Change only:
   - <specific user-requested mutation>
 ```
 
+## API Execution Profile
+
+Add this block when the handoff is intended to be executable through an image API rather than only readable as art direction. Prefer the Responses API for multi-turn reference-preserving work and the Images API for a single direct edit/generation. For GPT Image reference preservation, use high input fidelity when identity, face, logo, or source-cell details matter.
+
+```yaml
+api_execution_profile:
+  preferred_api: responses_api
+  reason: multi_turn_reference_preserving_workflow
+  model_family: gpt_image
+  action: edit
+  input_fidelity: high
+  reference_ordering:
+    first_image: identity_anchor_or_source_cell_asset
+    second_image: style_anchor_if_separate
+    later_images:
+      - composition_reference
+      - prop_reference
+      - forbidden_example
+  mask:
+    required: false
+    use_when:
+      - localized_edit
+      - exact_text_change
+      - expression_or_arm_position_change
+    rule: mask_targets_change_area_only_keep_rest_preserved
+  output:
+    size: auto_or_requested
+    format: png
+    background: transparent_or_opaque_or_auto
+```
+
+Reference ordering matters. Put the source cell or strongest identity anchor first. Put a separate style anchor second only when it is not the same image. Put composition, prop, and forbidden examples later so they do not outrank identity preservation.
+
+## Source Cell Asset Manifest
+
+For exact character-sheet reuse, the prompt pack should include a manifest for the cropped or isolated source cell. A full multi-pose sheet can be useful context, but it should not make an exact-preservation handoff `ready` by itself.
+
+```yaml
+source_cell_asset_manifest:
+  id: CROP_SampleMascot_FrontFullBody_001
+  crop_id: CROP_SampleMascot_FrontFullBody_001
+  source_image_id: Image_SampleMascot_001
+  source_region:
+    label: front_full_body
+    bbox:
+      x: needs_user_or_script
+      y: needs_user_or_script
+      width: needs_user_or_script
+      height: needs_user_or_script
+  asset_path: attached_or_local_crop_path
+  role:
+    - identity_anchor
+    - style_anchor
+    - proportion_anchor
+  preservation_priority:
+    - silhouette
+    - head_body_ratio
+    - limb_length
+    - line_weight
+    - detail_density
+    - shoe_simplification
+  ready_state: ready | coordinates_ready_crop_not_verified | blocked_until_crop_exists
+```
+
+Use `scripts/create_source_cell_manifest.py` to create this manifest when coordinates or a crop path are available.
+
+## Technical Contract And Final Prompt Split
+
+Keep the full ontology and handoff metadata in `technical_contract`, then produce a shorter final prompt that image generation can execute. The final prompt should normally prioritize:
+
+1. task type
+2. reference roles
+3. change-only instructions
+4. preserve rules
+5. style fidelity lock
+6. avoid list
+
+```yaml
+prompt_pack:
+  technical_contract:
+    generation_contract: GEN_001
+    reference_preserve_model: active
+    source_cell_asset_manifest: CROP_SampleMascot_FrontFullBody_001
+    exact_text_policy: optional
+    evaluation_contract: EVAL_CONTRACT_001
+  final_imagegen_prompt:
+    max_length_target: 1200_to_2500_chars
+    content: |
+      This is an identity-preserving edit/reference task, not a redesign.
+      Use CROP_SampleMascot_FrontFullBody_001 as the first input image.
+      Change only: angry expression, crossed arms, shirt text "MAD".
+      Preserve: exact source-cell silhouette, head/body ratio, compact torso, short limbs, simplified shoes, flat 2D line art.
+      Avoid: taller body, realistic shoes, glossy 3D shading, semi-realistic redraw.
+```
+
+The full technical contract can be long; the final prompt should stay short, explicit, and repetition-safe.
+
+## Exact Text And Mask Policy
+
+When exact text matters, add a policy instead of hoping the model spells and places it correctly.
+
+```yaml
+exact_text_policy:
+  text_required: true
+  text_source:
+    assertion_id: ASSERT_ShirtText_001
+    approval_status: approved
+  rendering_strategy:
+    primary: image_edit_with_mask
+    fallback: generate_without_text_then_add_text_in_postprocess
+  validation:
+    reject_when:
+      - misspelled_text
+      - wrong_case
+      - wrong_placement_changes_design
+```
+
+Use a mask for localized shirt text, logo, arm-position, or expression edits when the surrounding source cell should stay preserved.
+
 ## Invariant Restatement
 
 Include an invariant block in every final prompt or edit prompt. Do not rely on prior turns.

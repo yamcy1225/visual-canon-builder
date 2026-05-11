@@ -1,0 +1,39 @@
+{
+  "evaluation_result": {
+    "id": "EVAL_SampleMascot_StyleDrift_001",
+    "generated_image_id": "GENIMG_SampleMascot_001",
+    "compared_against": {
+      "identity_anchor": "Image_SampleMascot_001",
+      "style_anchor": "CROP_SampleMascot_FrontFullBody_001",
+      "generation_contract": "GEN_SampleMascot_001"
+    },
+    "classification": "reject",
+    "confidence": "high",
+    "summary": "The character is recognizable, but the source-cell body ratio and shoe simplification were redesigned.",
+    "checks": {
+      "identity_pass": "partial",
+      "style_pass": false,
+      "proportion_pass": false,
+      "semantic_pass": true,
+      "composition_pass": "partial"
+    },
+    "drift_patterns": [
+      "head_body_ratio_changed",
+      "source_cell_preservation_failed",
+      "realistic_product_detail_added"
+    ],
+    "prompt_patch": {
+      "id": "PATCH_SampleMascot_001",
+      "apply_to_next_prompt": true,
+      "instructions": [
+        "Use the front full-body source cell as the first input image.",
+        "Restore compact mascot proportions and simplified shoes.",
+        "Do not make the body taller, older, or more realistically rendered."
+      ]
+    },
+    "forbidden_example_candidate": {
+      "use_as_forbidden_example": true,
+      "reason": "Useful negative example for source-cell proportion and style drift."
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "evaluation_result": {
+    "id": "EVAL_SampleMascot_Jump_Pass_001",
+    "generated_image_id": "GENIMG_SampleMascot_Jump_002",
+    "compared_against": {
+      "identity_anchor": "CROP_SampleMascot_FrontFullBody_001",
+      "style_anchor": "CROP_SampleMascot_FrontFullBody_001",
+      "canon_version": "CHR_SampleMascot_v1.0.0",
+      "generation_contract": "GEN_SampleMascot_001"
+    },
+    "classification": "pass",
+    "confidence": "medium",
+    "summary": "Pass: SampleMascot's jump pose preserves the animal identity, compact source-sheet proportions, short rounded limbs, exact shirt text, and line-art style.",
+    "checks": {
+      "identity_pass": true,
+      "style_pass": true,
+      "proportion_pass": true,
+      "semantic_pass": true,
+      "character_identity_pass": true,
+      "eye_construction_pass": true,
+      "star_pupil_pass": true,
+      "eyelash_pass": true,
+      "hand_digit_count_pass": true,
+      "ear_shape_pass": true,
+      "compact_body_proportion_pass": true,
+      "arm_length_pass": true,
+      "leg_length_pass": true,
+      "limb_proportion_pass": true,
+      "exact_text_pass": true,
+      "shoe_and_sock_design_pass": true,
+      "source_sheet_style_pass": true
+    },
+    "drift_patterns": [],
+    "prompt_patch": {
+      "id": "PATCH_SampleMascot_Jump_Pass_001",
+      "apply_to_next_prompt": false,
+      "instructions": []
+    }
+  }
+}

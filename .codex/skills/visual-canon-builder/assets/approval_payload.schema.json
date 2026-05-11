@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://visual-canon-builder.local/schema/approval_payload.schema.json",
+  "title": "Approval Payload",
+  "type": "object",
+  "required": [
+    "approval_payload"
+  ],
+  "properties": {
+    "approval_payload": {
+      "type": "object",
+      "required": [
+        "review_pack_id",
+        "applies_to",
+        "decisions"
+      ],
+      "properties": {
+        "review_pack_id": {
+          "type": "string"
+        },
+        "applies_to": {
+          "type": "string"
+        },
+        "answer_mode": {
+          "enum": [
+            "guided",
+            "batch"
+          ]
+        },
+        "decisions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "assertion_id",
+              "expected_assertion_version",
+              "expected_value_hash",
+              "action"
+            ],
+            "properties": {
+              "assertion_id": {
+                "type": "string"
+              },
+              "expected_assertion_version": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "expected_value_hash": {
+                "type": "string"
+              },
+              "action": {
+                "enum": [
+                  "approve",
+                  "reject",
+                  "revise",
+                  "keep_provisional"
+                ]
+              },
+              "revised_value": {},
+              "note": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

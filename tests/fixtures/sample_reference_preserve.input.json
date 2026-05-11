@@ -1,0 +1,95 @@
+{
+  "entity_type": "Character",
+  "id": "CHR_SampleMascot",
+  "primary_request": "angry crossed-arm image with shirt text MAD",
+  "use_case": "reference_preserve_mascot_edit",
+  "generation_contract": {
+    "id": "GEN_SampleMascot_001",
+    "task_type": "identity_preserving_reference_generation",
+    "task_sensitivity": "identity_sensitive",
+    "default_mode": "edit_target_preserve",
+    "text_generate_allowed": false,
+    "reference_policy": {
+      "identity_anchor": "Image_SampleMascot_001",
+      "style_anchor": "Image_SampleMascot_001"
+    },
+    "mutation_policy": {
+      "allowed_to_change": [
+        "angry expression",
+        "crossed arms",
+        "shirt text MAD"
+      ],
+      "must_not_change": [
+        "face geometry",
+        "compact head/body ratio",
+        "short simplified limbs",
+        "flat 2D black-and-white line style",
+        "simplified shoes"
+      ]
+    },
+    "invariant_restatement": {
+      "required_every_prompt": true,
+      "lines": [
+        "Preserve the exact source-cell silhouette, proportions, line language, and detail density.",
+        "Do not redesign the body, legs, shoes, face, palette, or rendering style."
+      ]
+    }
+  },
+  "reference_preserve_model": {
+    "mode": "edit_target_preserve",
+    "source_cell_asset": {
+      "required": true,
+      "crop_id": null,
+      "asset_path": null,
+      "full_sheet_only": "blocked_for_exact_preservation"
+    },
+    "preserve": [
+      "silhouette",
+      "head_body_ratio",
+      "limb_length",
+      "shoe_simplification",
+      "line_style",
+      "detail_density"
+    ]
+  },
+  "canon_assertions": [
+    {
+      "id": "ASSERT_SampleMascot_StarPupils",
+      "subject": "CHR_SampleMascot",
+      "predicate": "hasEyeMotif",
+      "object": "black eyes with white star-shaped pupils",
+      "assertion_version": 1,
+      "value_hash": "sha256:sample_mascot-star-pupils-v1",
+      "evidence_refs": [
+        "EV_SampleMascot_Face_001"
+      ],
+      "retrieval_scope": "current_conversation_only",
+      "source_image_id": "Image_SampleMascot_001",
+      "source_role": "canon candidate",
+      "risk_tier": "identity_critical",
+      "confidence": "observed",
+      "canon_status": "provisional",
+      "approval_status": "pending_user_approval",
+      "asserted_by": "visual-canon-builder",
+      "derived_from": [
+        "image_analysis_sample_mascot_001"
+      ],
+      "needs_confirmation": true
+    }
+  ],
+  "unresolved_questions": [
+    {
+      "id": "Q_SampleMascot_SourceCell_001",
+      "question": "front full-body source cell crop을 제공할까요?",
+      "blocking_for_ready": true,
+      "blocking_for_provisional": false,
+      "default_if_unanswered": "block_ready_handoff"
+    }
+  ],
+  "forbidden": [
+    "identity-only similarity",
+    "elongated adult proportions",
+    "realistic product-detail shoes",
+    "glossy 3D shading"
+  ]
+}

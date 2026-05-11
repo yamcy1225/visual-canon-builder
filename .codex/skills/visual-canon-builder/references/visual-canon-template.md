@@ -194,6 +194,69 @@ generation_contract:
       - <Preserve the exact same character identity from the reference image.>
       - <Only change: requested_change.>
 
+api_execution_profile:
+  preferred_api: <responses_api | image_api>
+  reason: <multi_turn_reference_preserving_workflow | single_prompt_generation>
+  model_family: gpt_image
+  action: <auto | generate | edit>
+  input_fidelity: <high | low>
+  reference_ordering:
+    first_image: <identity_anchor_or_source_cell_asset>
+    second_image: <style_anchor_if_separate_or_null>
+    later_images:
+      - <composition_reference>
+      - <prop_reference>
+      - <forbidden_example>
+  mask:
+    required: <true | false>
+    use_when:
+      - localized_edit
+      - exact_text_change
+      - expression_or_arm_position_change
+    rule: mask_targets_change_area_only_keep_rest_preserved
+  output:
+    size: <auto_or_requested>
+    format: <png | webp | jpeg>
+    background: <transparent | opaque | auto>
+
+source_cell_asset_manifest:
+  id: <CROP_001>
+  crop_id: <CROP_001>
+  source_image_id: <SRC_Image_001>
+  source_region:
+    label: <front_full_body | side_full_body | expression_head | prop_crop>
+    bbox:
+      x: <number or needs_user_or_script>
+      y: <number or needs_user_or_script>
+      width: <number or needs_user_or_script>
+      height: <number or needs_user_or_script>
+  asset_path: <path | attached image id | null>
+  role:
+    - identity_anchor
+    - style_anchor
+    - proportion_anchor
+  preservation_priority:
+    - silhouette
+    - head_body_ratio
+    - limb_length
+    - line_weight
+    - detail_density
+  ready_state: <ready | coordinates_ready_crop_not_verified | blocked_until_crop_exists>
+
+exact_text_policy:
+  text_required: <true | false>
+  text_source:
+    assertion_id: <ASSERT_Text_001>
+    approval_status: <approved | pending_user_approval>
+  rendering_strategy:
+    primary: <image_edit_with_mask | postprocess_compositing | no_exact_text_needed>
+    fallback: <generate_without_text_then_add_text_in_postprocess>
+  validation:
+    reject_when:
+      - misspelled_text
+      - wrong_case
+      - wrong_placement_changes_design
+
 evaluation_contract:
   after_each_generation:
     - assign_generated_image_id
@@ -839,6 +902,7 @@ Asset type: <where this asset will be used>
 Task sensitivity: <identity_sensitive | style_sensitive | loose_inspiration>
 Primary request: <requested image>
 Handoff status: <ready | provisional | blocked>
+API execution profile: <preferred_api/action/input_fidelity/reference_ordering/mask/output>
 Imagegen execution: mode=<edit | reference_generate | text_generate>; text_generate_allowed=<true | false>; reason=<why this mode is acceptable>; input_roles=<identity_anchor/style_anchor/edit_target/composition_reference/forbidden_example>; output_aspect=<ratio or size>; transparent_required=<true | false>; variants=<count>; postprocess=<none | chroma-key removal | native transparency fallback>
 Reference preserve mode: <off | identity_preserve | edit_target_preserve>; source_cell=<front/full-body/expression/prop crop>; preserve=<silhouette, head/body ratio, limb length, line style, detail density>; allowed_change=<pose/expression/text only>
 Source cell asset: <required | optional | not_needed>; crop_id=<source-cell crop or isolated edit target>; full_sheet_only=<allowed | blocked_for_exact_preservation>
@@ -864,6 +928,23 @@ Change only: <specific user-requested mutations>
 Unresolved questions: <canon-critical blockers or needs_confirmation items>
 Avoid: <confirmed forbidden rules, request-local prohibitions, drift risks, watermark, unwanted text>
 Evaluation checklist: <identity_pass/style_pass/proportion_pass/semantic_pass/drift_notes/next_prompt_patch>
+```
+
+For API-ready output, split the prompt pack into:
+
+```yaml
+prompt_pack:
+  technical_contract:
+    # full canon, assertions, source-cell manifest, API profile, and review rules
+  final_imagegen_prompt:
+    max_length_target: 1200_to_2500_chars
+    priority_order:
+      - task_type
+      - reference_roles
+      - change_only
+      - preserve
+      - style_fidelity_lock
+      - avoid
 ```
 
 ## Cutout / Transparent-Background Prompt Add-On

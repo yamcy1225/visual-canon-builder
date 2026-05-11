@@ -1,0 +1,56 @@
+{
+  "entity_type": "Character",
+  "id": "CHR_SampleMascot",
+  "generation_contract": {
+    "id": "GEN_SampleMascot_Approval_001",
+    "task_type": "identity_preserving_reference_generation",
+    "task_sensitivity": "identity_sensitive",
+    "default_mode": "reference_image_preferred",
+    "reference_policy": {
+      "identity_anchor": "Image_SampleMascot_001",
+      "style_anchor": "Image_SampleMascot_001"
+    }
+  },
+  "canon_assertions": [
+    {
+      "id": "ASSERT_SampleMascot_StarPupils",
+      "subject": "CHR_SampleMascot",
+      "predicate": "hasEyeMotif",
+      "object": "black eyes with white star-shaped pupils",
+      "assertion_version": 1,
+      "value_hash": "sha256:sample_mascot-star-pupils-v1",
+      "evidence_refs": [
+        "EV_SampleMascot_Face_001"
+      ],
+      "retrieval_scope": "current_conversation_only",
+      "confidence": "observed",
+      "canon_status": "provisional",
+      "approval_status": "pending_user_approval",
+      "asserted_by": "visual-canon-builder",
+      "derived_from": [
+        "image_analysis_sample_mascot_001"
+      ],
+      "needs_confirmation": true
+    },
+    {
+      "id": "ASSERT_SampleMascot_LongboardProp",
+      "subject": "CHR_SampleMascot",
+      "predicate": "hasProp",
+      "object": "longboard",
+      "assertion_version": 1,
+      "value_hash": "sha256:sample_mascot-longboard-v1",
+      "evidence_refs": [
+        "EV_SampleMascot_Prop_001"
+      ],
+      "retrieval_scope": "current_conversation_only",
+      "confidence": "observed",
+      "canon_status": "provisional",
+      "approval_status": "pending_user_approval",
+      "asserted_by": "visual-canon-builder",
+      "derived_from": [
+        "image_analysis_sample_mascot_001"
+      ],
+      "needs_confirmation": true
+    }
+  ]
+}

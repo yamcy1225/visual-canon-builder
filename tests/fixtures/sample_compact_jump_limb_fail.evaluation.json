@@ -1,0 +1,49 @@
+{
+  "evaluation_result": {
+    "id": "EVAL_SampleMascot_Jump_LimbFail_001",
+    "generated_image_id": "GENIMG_SampleMascot_Jump_001",
+    "compared_against": {
+      "identity_anchor": "CROP_SampleMascot_FrontFullBody_001",
+      "style_anchor": "CROP_SampleMascot_FrontFullBody_001",
+      "canon_version": "CHR_SampleMascot_v1.0.0",
+      "generation_contract": "GEN_SampleMascot_001"
+    },
+    "classification": "reject",
+    "confidence": "high",
+    "summary": "Reject: SampleMascot keeps the broad animal identity, but the jump pose stretches the legs and compresses the arms outside the source-sheet mascot proportions.",
+    "checks": {
+      "identity_pass": true,
+      "style_pass": true,
+      "proportion_pass": false,
+      "semantic_pass": true,
+      "character_identity_pass": true,
+      "eye_construction_pass": true,
+      "star_pupil_pass": true,
+      "eyelash_pass": true,
+      "hand_digit_count_pass": true,
+      "ear_shape_pass": true,
+      "compact_body_proportion_pass": false,
+      "arm_length_pass": false,
+      "leg_length_pass": false,
+      "limb_proportion_pass": false,
+      "exact_text_pass": true,
+      "shoe_and_sock_design_pass": true,
+      "source_sheet_style_pass": true
+    },
+    "drift_patterns": [
+      "limb_proportion_changed",
+      "arms_too_short",
+      "legs_too_long",
+      "compact_body_ratio_lost"
+    ],
+    "prompt_patch": {
+      "id": "PATCH_SampleMascot_Jump_LimbFail_001",
+      "apply_to_next_prompt": true,
+      "instructions": [
+        "Reject the stretched jump body: restore SampleMascot's compact source-sheet mascot proportions.",
+        "Keep legs short and rounded, not elongated; knees and sneakers should stay close to the original character-sheet scale.",
+        "Keep arms visibly long enough for SampleMascot's original rounded forearm-and-hand silhouette; do not shrink the arms into tiny side nubs."
+      ]
+    }
+  }
+}

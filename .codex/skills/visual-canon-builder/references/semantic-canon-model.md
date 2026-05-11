@@ -403,3 +403,47 @@ Confirmed constraints: assertions with approval_status approved and user_answers
 Provisional constraints: inferred or low-confidence facts that may help but must not be treated as canon
 Unresolved questions: canon-critical blockers and needs_confirmation fields
 ```
+
+## Export Profile
+
+Keep the practical YAML primary, but make future graph export possible by using stable IDs, explicit predicates, and schema hints. Do not require JSON-LD during normal use; this is an export contract for larger character, prop, or world libraries.
+
+```yaml
+semantic_export_profile:
+  exportable_as:
+    - json_ld
+    - shacl_like_shapes
+  context_uri: https://visual-canon-builder.local/schema#
+  stable_ids_required: true
+  relation_predicates_are_pascal_or_camel_case: true
+  assertion_values_are_versioned: true
+```
+
+Minimal JSON-LD mirror:
+
+```json
+{
+  "@context": {
+    "vcb": "https://visual-canon-builder.local/schema#",
+    "servesAs": "vcb:servesAs",
+    "mustPreserve": "vcb:mustPreserve",
+    "supportedBy": "vcb:supportedBy"
+  },
+  "@id": "Image_001",
+  "@type": "vcb:ReferenceImage",
+  "servesAs": [
+    "vcb:IdentityAnchor",
+    "vcb:StyleAnchor"
+  ],
+  "supportedBy": [
+    "EV_001"
+  ]
+}
+```
+
+When exporting, derive triples from canonical fields instead of maintaining duplicate truth:
+
+- `canon_assertions[*].evidence_refs` -> `supportedBy`
+- `source_cell_asset_manifest.role` -> `servesAs`
+- `generation_contract.mutation_policy.must_not_change` -> `mustPreserve`
+- `evaluation_result.drift_patterns` -> `detectsDrift`

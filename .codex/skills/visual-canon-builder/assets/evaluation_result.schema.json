@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://visual-canon-builder.local/schema/evaluation_result.schema.json",
+  "title": "Evaluation Result",
+  "type": "object",
+  "required": [
+    "evaluation_result"
+  ],
+  "properties": {
+    "evaluation_result": {
+      "type": "object",
+      "required": [
+        "id",
+        "generated_image_id",
+        "compared_against",
+        "classification",
+        "checks",
+        "drift_patterns"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "generated_image_id": {
+          "type": "string"
+        },
+        "compared_against": {
+          "type": "object"
+        },
+        "classification": {
+          "enum": [
+            "pass",
+            "fix",
+            "reject"
+          ]
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "summary": {
+          "type": "string"
+        },
+        "checks": {
+          "type": "object"
+        },
+        "drift_patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "prompt_patch": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "forbidden_example_candidate": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

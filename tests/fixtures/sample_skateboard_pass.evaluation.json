@@ -1,0 +1,31 @@
+{
+  "evaluation_result": {
+    "id": "EVAL_SampleSkate_Skateboard_Pass_001",
+    "generated_image_id": "GENIMG_SampleSkate_Skateboard_002",
+    "compared_against": {
+      "identity_anchor": "CROP_SampleSkate_FrontFullBody_001",
+      "style_anchor": "Image_001",
+      "generation_contract": "GEN_SampleSkate_001"
+    },
+    "classification": "pass",
+    "confidence": "high",
+    "summary": "Pass: SampleSkate identity, eye construction, five-digit hands, and skateboard proportions match the canon closely enough for user approval review.",
+    "checks": {
+      "identity_pass": true,
+      "style_pass": true,
+      "proportion_pass": true,
+      "semantic_pass": true,
+      "composition_pass": true,
+      "eye_construction_pass": true,
+      "star_pupil_pass": true,
+      "hand_digit_count_pass": true,
+      "skateboard_proportion_pass": true
+    },
+    "drift_patterns": [],
+    "prompt_patch": null,
+    "forbidden_example_candidate": {
+      "use_as_forbidden_example": false,
+      "reason": null
+    }
+  }
+}

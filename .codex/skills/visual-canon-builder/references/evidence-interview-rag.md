@@ -27,9 +27,9 @@ guided_approval_interview:
   current_question_index: 1
   total_questions: 3
   current_question:
-    id: QAPP_Horangnim_Identity
+    id: QAPP_SampleMascot_Identity
     label: "캐릭터 정체성"
-    asks: "흰 호랑이 마스코트 정체성, 다이아몬드형 눈, 검은 줄무늬를 정본으로 승인할까요?"
+    asks: "흰 샘플 마스코트 마스코트 정체성, 다이아몬드형 눈, 검은 줄무늬를 정본으로 승인할까요?"
     recommendation: "1"
     choices:
       - key: "1"
@@ -64,19 +64,19 @@ user_review:
   status: "초안 준비됨; 아직 정본 잠금 전"
   evidence_scope: current_conversation_only
   found:
-    - "흰 호랑이 마스코트: 둥근 귀, 다이아몬드 눈, 검은 줄무늬"
+    - "흰 샘플 마스코트 마스코트: 둥근 귀, 다이아몬드 눈, 검은 줄무늬"
     - "기본 의상: 하와이안 셔츠, 어두운 반바지, 흰 클로그"
     - "소품 후보: 긴 보드"
   needs_decision:
     - label: "캐릭터 정체성"
       covers:
-        - ASSERT_Horangnim_FaceIdentity
-        - ASSERT_Horangnim_TigerMarkings
+        - ASSERT_SampleMascot_FaceIdentity
+        - ASSERT_SampleMascot_TigerMarkings
       recommendation: approve
       reason: "정면/측면/후면/표정 컷에서 반복됩니다."
     - label: "긴 보드"
       covers:
-        - ASSERT_Horangnim_LongboardProp
+        - ASSERT_SampleMascot_LongboardProp
       recommendation: keep_provisional
       reason: "액션 컷과 소품 컷에는 보이지만 항상 착용하는 물건인지는 미확정입니다."
   fast_reply:
@@ -120,7 +120,7 @@ source_inventory:
 
 ```yaml
 evidence_cards:
-  - id: EV_Dallae_Face_001
+  - id: EV_SampleMascot_Face_001
     source_id: SRC_Image_001
     modality: image
     region_or_note: front and expression heads
@@ -128,7 +128,7 @@ evidence_cards:
     view_label: front_and_expression_heads
     bbox_or_region: descriptive_region_no_pixel_bbox
     source_text_span: null
-    observation: white rabbit mascot face, long upright ears, star pupils, small black nose
+    observation: white animal mascot face, long upright ears, star pupils, small black nose
     confidence: observed
     usable_for:
       - identity
@@ -143,14 +143,14 @@ Good evidence cards are small enough to review but specific enough to audit. Pre
 
 ```yaml
 canon_assertions:
-  - id: ASSERT_Dallae_StarPupils
-    subject: CHR_Dallae
+  - id: ASSERT_SampleMascot_StarPupils
+    subject: CHR_SampleMascot
     predicate: hasEyeMotif
     object: black eyes with white star-shaped pupils
     assertion_version: 1
     value_hash: hash_of_subject_predicate_object_v1
     evidence_refs:
-      - EV_Dallae_Face_001
+      - EV_SampleMascot_Face_001
     retrieval_scope: current_conversation_only
     source_image_id: SRC_Image_001
     source_role: canon candidate
@@ -158,7 +158,7 @@ canon_assertions:
     canon_status: provisional
     approval_status: pending_user_approval
     asserted_by: visual-canon-builder
-    derived_from: image_analysis_dallae_001
+    derived_from: image_analysis_sample_mascot_001
     needs_confirmation: true
 ```
 
@@ -173,8 +173,8 @@ canon_assertions:
 
 ```yaml
 approval_review_pack:
-  review_pack_id: REVIEW_Dallae_001
-  entity_id: CHR_Dallae
+  review_pack_id: REVIEW_SampleMascot_001
+  entity_id: CHR_SampleMascot
   canon_lock_state: unlocked
   derived_lock_state: true
   instructions: "각 항목을 approve, reject, revise, keep_provisional 중 하나로 표시하세요."
@@ -182,11 +182,11 @@ approval_review_pack:
     - approve_all_low_risk
     - keep_all_optional_provisional
   items:
-    - assertion_id: ASSERT_Dallae_StarPupils
+    - assertion_id: ASSERT_SampleMascot_StarPupils
       assertion_version: 1
       value_hash: hash_of_subject_predicate_object_v1
       evidence_refs:
-        - EV_Dallae_Face_001
+        - EV_SampleMascot_Face_001
       current_value: black eyes with white star-shaped pupils
       recommended_action: approve
       risk_tier: identity_critical
@@ -199,17 +199,17 @@ Use clickable choice UI when available. If not available, show the human-friendl
 
 ```yaml
 approval_payload:
-  review_pack_id: REVIEW_Dallae_001
-  applies_to: CHR_Dallae
+  review_pack_id: REVIEW_SampleMascot_001
+  applies_to: CHR_SampleMascot
   answer_mode: batch
   decisions:
-    - assertion_id: ASSERT_Dallae_StarPupils
+    - assertion_id: ASSERT_SampleMascot_StarPupils
       expected_assertion_version: 1
       expected_value_hash: hash_of_subject_predicate_object_v1
       action: approve
       revised_value: null
       note: null
-    - assertion_id: ASSERT_Dallae_ShirtText
+    - assertion_id: ASSERT_SampleMascot_ShirtText
       expected_assertion_version: 1
       expected_value_hash: hash_of_subject_predicate_object_v1
       action: keep_provisional
@@ -273,10 +273,10 @@ Convert each decision into provenance before changing canon:
 
 ```yaml
 user_answers:
-  - id: UA_Dallae_Approval_001
+  - id: UA_SampleMascot_Approval_001
     answers_question: approval_payload
-    applies_to_assertion: ASSERT_Dallae_StarPupils
-    review_pack_id: REVIEW_Dallae_001
+    applies_to_assertion: ASSERT_SampleMascot_StarPupils
+    review_pack_id: REVIEW_SampleMascot_001
     expected_assertion_version: 1
     expected_value_hash: hash_of_subject_predicate_object_v1
     value: approve
@@ -285,9 +285,9 @@ user_answers:
     recorded_in_turn: current_conversation
 
 relations:
-  - subject: ASSERT_Dallae_StarPupils
+  - subject: ASSERT_SampleMascot_StarPupils
     predicate: wasDerivedFrom
-    object: UA_Dallae_Approval_001
+    object: UA_SampleMascot_Approval_001
 ```
 
 Recompute rules:

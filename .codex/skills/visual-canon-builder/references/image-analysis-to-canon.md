@@ -113,7 +113,7 @@ reference_preserve_model:
   mode: identity_preserve
   source_cell_asset:
     required: true
-    crop_id: CROP_Dallae_FrontFullBody_001
+    crop_id: CROP_SampleMascot_FrontFullBody_001
     asset_path: needs_crop_or_attached_cell
     full_sheet_only: blocked_for_exact_preservation
   source_cell:
@@ -434,8 +434,8 @@ clarification_gate:
   hard_stop: false
 
 question_queue:
-  - id: Q_Byuli_001
-    question: Image_Byuli_001을 approved canon source로 승격할까요?
+  - id: Q_SampleSkate_001
+    question: Image_SampleSkate_001을 approved canon source로 승격할까요?
     type: canon_source_approval
     blocking_for_ready: true
     blocking_for_provisional: false
@@ -455,9 +455,9 @@ When the user replies, convert the answer into provenance before recomputing the
 
 ```yaml
 user_answers:
-  - id: UA_Byuli_001
-    answers_question: Q_Byuli_001
-    applies_to_assertion: ASSERT_Byuli_001
+  - id: UA_SampleSkate_001
+    answers_question: Q_SampleSkate_001
+    applies_to_assertion: ASSERT_SampleSkate_001
     value: keep_as_candidate
     asserted_by: user
     confidence: user_confirmed
