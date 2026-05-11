@@ -20,7 +20,9 @@ clarification_gate:
   reason: unresolved_questions_do_not_block_provisional_handoff
   mode: immediate_provisional_progression
   hard_stop: false
-  max_questions_this_turn: 5
+  max_active_questions_per_turn: 1
+  max_total_questions: unbounded
+  question_budget_policy: one_active_question_no_fixed_total_cap
 
 question_queue:
   - id: Q_SampleSkate_001

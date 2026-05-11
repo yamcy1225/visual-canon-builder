@@ -1,6 +1,6 @@
 ---
 name: visual-canon-builder
-description: Build user-friendly, imagegen-ready visual canon kits from character, faction, worldbuilding, costume, item, environment, game-asset notes, or one or more reference images, especially when preserving identity, original style, proportions, palette, line language, and preventing visual drift matters. Use when Codex needs to analyze visual references, run a compact evidence interview before canon lock, let the user approve/revise/reject canon candidates in plain language, document observed visual facts, create a lightweight visual knowledge graph with provenance, validation shapes, proportion/view-projection rules, generation contracts, evaluation loops, API execution profiles, source-cell manifests, and safe `$imagegen` edit/reference prompt packs without directly generating images.
+description: Build user-friendly, imagegen-ready visual canon kits from character, faction, worldbuilding, costume, item, environment, game-asset notes, or one or more reference images, especially when preserving identity, original style, numeric proportions, palette, line language, and preventing visual drift matters. Use when Codex needs to analyze visual references, run guided or deep evidence interviews before canon lock, let the user approve/revise/reject canon candidates in plain language, document observed visual facts, create a lightweight visual knowledge graph with provenance, validation shapes, numeric proportion/view-projection rules, generation contracts, evaluation loops, API execution profiles, source-cell manifests, and safe `$imagegen` edit/reference prompt packs without directly generating images.
 ---
 
 # Visual Canon Builder
@@ -20,7 +20,8 @@ This is a lightweight ontology-inspired workflow, not a full RDF/OWL/SHACL imple
 3. Split evidence into small `Evidence Cards`, map them to `Candidate Assertions`, and keep all image-derived claims provisional until the approval gate says otherwise.
 4. Run the user-friendly evidence interview before final canon lock:
    - Ask exactly one current approval question at the top when approval is needed.
-   - Show a compact `User Review`, `Quick Approval Table`, and `Next Reply Options`.
+   - Do not impose a fixed total-question cap. Four questions is a UI shortcut, not a canon limit.
+   - Show a compact `User Review`, `Quick Approval Table`, and `Next Reply Options`, while keeping deeper unresolved decisions in the queue.
    - Keep IDs, hashes, and full YAML in technical sections unless the user asks for strict/audit mode.
 5. Build canon layers:
    - `identity_canon`: face geometry, silhouette, anatomy, proportions, unique marks, symbols, costume structure, subject-left/right details.
@@ -29,9 +30,21 @@ This is a lightweight ontology-inspired workflow, not a full RDF/OWL/SHACL imple
    - `generation_contract`: reference roles, change budget, allowed mutations, forbidden mutations, invariant restatement.
    - `evaluation_contract`: identity/style/proportion/semantic checks, drift taxonomy, pass/fix/reject rules, prompt-patch format.
 6. Separate observed facts from inference. Mark hidden, ambiguous, unapproved, or conflicting details as `needs_confirmation`, `pending_user_approval`, `keep_provisional`, or `unresolved`.
-7. Ask only canon-critical clarification questions. Use a `question_queue` with stable IDs, `blocking_for_ready`, `blocking_for_provisional`, affected fields, and defaults. Continue with a provisional ontology and prompt pack unless a hard-stop condition applies.
+7. Ask canon-critical clarification questions until the lock is genuinely resolved or the user explicitly chooses batch approval/stop. Use a `question_queue` with stable IDs, `blocking_for_ready`, `blocking_for_provisional`, affected fields, defaults, and an `interview_policy`. Continue with a provisional ontology and prompt pack unless a hard-stop condition applies.
 8. Compile one or more `$imagegen` prompt packs. Put only user-approved assertions in `Confirmed constraints`; keep pending, inferred, role-ambiguous, or source-ambiguous facts in `Provisional constraints` or `Unresolved questions`.
 9. Add a validation checklist, drift taxonomy, prompt-patch loop, and canon promotion rule. Generated outputs never become canon automatically.
+
+## Deep Canon Mode
+
+Use `deep_canon` mode when the user asks for a strict/정본 lock, when generated candidates drift repeatedly, when proportions must be numeric, or when the asset is identity-critical.
+
+Rules:
+- Ask one active question per response by default, but allow an unbounded total queue. Use `max_active_questions_per_turn: 1` and `max_total_questions: unbounded` unless the user asks for batch review.
+- Treat the visible table as a review aid, not as the entire interview. Keep adding or refining questions as new drift evidence appears.
+- Require separate passes for source roles, source-cell crop/manifest, silhouette, numeric proportions, face construction, anatomy/digits, costume/text semantics, style/rendering, allowed variants, forbidden drift, and evaluation gates.
+- Prefer measured ratio locks over adjectives for fragile shapes. Record target/min/max values, source landmarks, tolerance validity, and reject conditions in `proportion_lock_profile`.
+- When user feedback corrects a drift ("too thin", "too fat", "shirt text changes by mood"), convert it into a new assertion or ratio lock instead of only patching the next prompt.
+- Do not mark handoff `ready` while any identity-critical, numeric-proportion, exact-text, left/right, or source-cell question remains unresolved.
 
 ## v3.8 Operational Mode
 
@@ -45,6 +58,7 @@ Use the operational pipeline when the user needs production-like repeatability, 
    - `final_imagegen_prompt`: short executable prompt focused on task, references, change-only rules, preserve rules, style lock, and avoid list.
 5. For exact character-sheet reuse, create a `source_cell_asset_manifest` with `scripts/create_source_cell_manifest.py` or equivalent manual coordinates before marking handoff `ready`.
 6. For pass-only delivery, generate candidates into a temporary directory, evaluate each candidate, and gate it with `scripts/score_generation_review.py`; use `scripts/run_generation_loop.py` when a command-driven generator/evaluator is available.
+   - For numeric proportion locks, evaluate candidate measurement JSON with `scripts/evaluate_proportion_locks.py`, then gate with `--profile numeric_mascot_identity`.
    - If the generation surface exposes candidates immediately, use `--review-mode visible_shortlist` instead of pretending they were hidden: label each exposed output as `keep_candidate`, `repair_candidate`, or `discard`, and offer only `shortlist/` candidates for user selection.
 7. Run `tests/run_contract_tests.py` after changing schemas, scripts, or handoff rules.
 
@@ -57,7 +71,7 @@ Do not present failed candidates as final. If the user asks for automatic verifi
 Load only the reference needed for the current turn:
 
 - `references/image-analysis-to-canon.md`: image inventory, observed facts, image role gates, proportion/view extraction.
-- `references/evidence-interview-rag.md`: evidence cards, guided approval interview, approval payloads, user-answer provenance.
+- `references/evidence-interview-rag.md`: evidence cards, guided/deep approval interview, approval payloads, user-answer provenance.
 - `references/interactive-clarification-loop.md`: question queues, provisional progression, answer application.
 - `references/style-canon-model.md`: identity-bound style extraction and style drift prevention.
 - `references/generation-contract.md`: edit/reference handoff, API execution profile, final prompt split, exact text/mask policy.

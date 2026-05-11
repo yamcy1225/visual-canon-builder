@@ -34,11 +34,131 @@
     "exact_text_policy": {
       "type": "object"
     },
+    "interview_policy": {
+      "$ref": "#/$defs/interview_policy"
+    },
+    "question_queue": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "proportion_lock_profile": {
+      "$ref": "#/$defs/proportion_lock_profile"
+    },
+    "lock_summary": {
+      "type": "object"
+    },
     "imagegen_handoff": {
       "type": "object"
     }
   },
   "$defs": {
+    "interview_policy": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "enum": [
+            "quick",
+            "standard",
+            "deep_canon",
+            "audit"
+          ]
+        },
+        "max_active_questions_per_turn": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_total_questions": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "enum": [
+                "unbounded",
+                "until_resolved"
+              ]
+            }
+          ]
+        },
+        "minimum_passes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "stop_condition": {
+          "type": "string"
+        }
+      }
+    },
+    "proportion_lock_profile": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "enum": [
+            "numeric_ratio_lock",
+            "descriptive_only"
+          ]
+        },
+        "source_cell_id": {
+          "type": "string"
+        },
+        "unit_basis": {
+          "type": "string"
+        },
+        "ratio_locks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ratio_lock"
+          }
+        }
+      }
+    },
+    "ratio_lock": {
+      "type": "object",
+      "required": [
+        "id",
+        "label"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "numerator_landmark": {
+          "type": "string"
+        },
+        "denominator_landmark": {
+          "type": "string"
+        },
+        "target": {
+          "type": "number"
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        },
+        "prompt_phrase": {
+          "type": "string"
+        },
+        "reject_if": {
+          "type": "string"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "canon_assertion": {
       "type": "object",
       "required": [

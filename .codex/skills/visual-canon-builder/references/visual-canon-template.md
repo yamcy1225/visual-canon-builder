@@ -297,7 +297,12 @@ relations:
 guided_approval_interview:
   status: <awaiting_user_decision | applying_answer | complete>
   current_question_index: <1-based index>
-  total_questions: <count>
+  total_questions: <current known queue count, not a hard cap>
+  interview_policy:
+    mode: <quick | standard | deep_canon | audit>
+    max_active_questions_per_turn: 1
+    max_total_questions: <unbounded | until_resolved | sufficiently_high_integer>
+    stop_condition: <canon_critical_queue_resolved_or_user_requests_batch_stop>
   current_question:
     id: <QAPP_001>
     label: <사용자용 결정 항목>
@@ -506,6 +511,23 @@ proportion_model:
     front_widths: <observed | inferred | needs_confirmation>
     side_depths: <observed | inferred | needs_confirmation>
     limb_lengths: <observed | inferred | needs_confirmation>
+
+proportion_lock_profile:
+  mode: <numeric_ratio_lock | descriptive_only>
+  source_cell_id: <source cell or image region>
+  unit_basis: <full_height_1000 | head_units | other>
+  ratio_locks:
+    - id: <stable_ratio_id>
+      label: <human-readable ratio>
+      numerator_landmark: <measured width or height>
+      denominator_landmark: <reference width or height>
+      target: <number>
+      min: <number>
+      max: <number>
+      prompt_phrase: <short imagegen-ready constraint>
+      reject_if: <plain-language failure condition>
+      evidence_refs:
+        - <EV_001>
 
 projection_rules:
   formula_type: orthographic_envelope_estimate

@@ -35,6 +35,60 @@ python .codex/skills/visual-canon-builder/scripts/score_generation_review.py \
 
 For a complete command-driven loop, use `scripts/run_generation_loop.py` with a generator command that writes `{candidate}` and an evaluator command that writes `{evaluation}`. The evaluator may be a vision-model review, a human-authored JSON review, or another local QA script, but it must produce the `evaluation_result` shape below. Failed candidates must not be promoted or displayed as final.
 
+## Numeric Proportion Lock Loop
+
+When a canon has `proportion_lock_profile`, run the candidate through a numeric ratio evaluator before promotion. The evaluator compares measured candidate values against each confirmed `target/min/max` lock and writes an `evaluation_result` that `score_generation_review.py` can gate.
+
+Use:
+
+```bash
+python .codex/skills/visual-canon-builder/scripts/evaluate_proportion_locks.py \
+  --canon canon.json \
+  --candidate-measurements attempt_01.measurements.json \
+  --output attempt_01.evaluation.json
+
+python .codex/skills/visual-canon-builder/scripts/score_generation_review.py \
+  attempt_01.evaluation.json \
+  --candidate-image attempt_01.png \
+  --profile numeric_mascot_identity \
+  --output-dir artifacts/numeric-loop
+```
+
+`candidate-measurements` can supply either precomputed ratios or raw landmark measurements:
+
+```json
+{
+  "candidate_measurements": {
+    "source": "vision review or measurement script",
+    "ratios": {
+      "torso_width_to_face_width": 0.77
+    },
+    "measurements": {
+      "torso_center_width": 270,
+      "face_width": 349
+    },
+    "checks": {
+      "identity_pass": true,
+      "style_pass": true,
+      "semantic_pass": true
+    }
+  }
+}
+```
+
+For command-driven loops, wire the evaluator into `run_generation_loop.py`:
+
+```bash
+python .codex/skills/visual-canon-builder/scripts/run_generation_loop.py \
+  --prompt prompt.txt \
+  --workdir artifacts/numeric-loop \
+  --profile numeric_mascot_identity \
+  --generate-command '<generator writes {candidate}>' \
+  --evaluate-command 'python .codex/skills/visual-canon-builder/scripts/evaluate_proportion_locks.py --canon canon.json --candidate-measurements {workdir}/attempt_{attempt}.measurements.json --output {evaluation}'
+```
+
+The loop is asset-agnostic. Do not commit source character images or generated candidates unless the user explicitly asks; commit only schemas, scripts, fixtures, and text contracts.
+
 ## Visible Candidate Shortlist Gate
 
 When the active generation surface exposes candidates immediately, do not treat that as a reason to skip verification. Use a visible-gated loop: show candidates as temporary outputs, evaluate each one immediately, then label it clearly.

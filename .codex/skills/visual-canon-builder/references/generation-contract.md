@@ -223,6 +223,7 @@ prompt_pack:
     generation_contract: GEN_001
     reference_preserve_model: active
     source_cell_asset_manifest: CROP_SampleMascot_FrontFullBody_001
+    proportion_lock_profile: active_when_numeric_ratios_are_confirmed
     exact_text_policy: optional
     evaluation_contract: EVAL_CONTRACT_001
   final_imagegen_prompt:
@@ -231,8 +232,8 @@ prompt_pack:
       This is an identity-preserving edit/reference task, not a redesign.
       Use CROP_SampleMascot_FrontFullBody_001 as the first input image.
       Change only: angry expression, crossed arms, shirt text "MAD".
-      Preserve: exact source-cell silhouette, head/body ratio, compact torso, short limbs, simplified shoes, flat 2D line art.
-      Avoid: taller body, realistic shoes, glossy 3D shading, semi-realistic redraw.
+      Preserve: exact source-cell silhouette, head/body ratio, confirmed numeric proportion locks, simplified shoes, flat 2D line art.
+      Avoid: taller body, wider body, ratio drift outside confirmed min/max ranges, realistic shoes, glossy 3D shading, semi-realistic redraw.
 ```
 
 The full technical contract can be long; the final prompt should stay short, explicit, and repetition-safe.

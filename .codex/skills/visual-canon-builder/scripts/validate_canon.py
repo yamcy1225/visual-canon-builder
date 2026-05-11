@@ -35,6 +35,10 @@ STRICT_REJECT_DRIFT = {
     "legs_too_long",
     "compact_body_ratio_lost",
     "compact_mascot_ratio_lost",
+    "numeric_proportion_lock_failed",
+    "torso_width_ratio_out_of_range",
+    "hip_width_ratio_out_of_range",
+    "full_silhouette_ratio_out_of_range",
 }
 
 
@@ -46,6 +50,98 @@ def detect_kind(data: dict[str, Any]) -> str:
     if "evaluation_result" in data:
         return "evaluation_result"
     return "visual_canon"
+
+
+def numeric(value: Any) -> float | None:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return float(value)
+    return None
+
+
+def interview_policy(data: dict[str, Any]) -> dict[str, Any]:
+    policy = data.get("interview_policy")
+    if isinstance(policy, dict):
+        return policy
+    gate = data.get("clarification_gate")
+    if isinstance(gate, dict) and isinstance(gate.get("interview_policy"), dict):
+        return gate["interview_policy"]
+    if isinstance(gate, dict):
+        legacy: dict[str, Any] = {}
+        for key in ("max_active_questions_per_turn", "max_total_questions", "max_questions_this_turn"):
+            if key in gate:
+                legacy[key] = gate[key]
+        if legacy:
+            return legacy
+    return {}
+
+
+def validate_interview_policy(data: dict[str, Any]) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    policy = interview_policy(data)
+    if not policy:
+        return errors, warnings
+
+    mode = policy.get("mode")
+    active = policy.get("max_active_questions_per_turn")
+    if active is not None and (not isinstance(active, int) or active < 1):
+        errors.append("interview_policy.max_active_questions_per_turn must be a positive integer")
+
+    if mode == "deep_canon":
+        total = policy.get("max_total_questions")
+        if isinstance(total, int) and total < 10:
+            errors.append("deep_canon interview must not use a short fixed total-question cap; use unbounded/until_resolved or at least 10")
+        elif isinstance(total, str) and total not in {"unbounded", "until_resolved"}:
+            errors.append("deep_canon interview_policy.max_total_questions must be unbounded, until_resolved, or a sufficiently high integer")
+        elif total is None:
+            warnings.append("deep_canon interview should declare max_total_questions=unbounded or until_resolved")
+
+        legacy_cap = policy.get("max_questions_this_turn")
+        if isinstance(legacy_cap, int) and legacy_cap <= 4:
+            errors.append("deep_canon must not rely on legacy max_questions_this_turn<=4 as a canon interview cap")
+
+        passes = as_list(policy.get("minimum_passes"))
+        if len(passes) < 8:
+            warnings.append("deep_canon interview should list enough minimum_passes to cover source, proportions, style, variants, and evaluation")
+
+    return errors, warnings
+
+
+def validate_proportion_lock_profile(data: dict[str, Any]) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    profile = data.get("proportion_lock_profile") or {}
+    if not isinstance(profile, dict) or not profile:
+        return errors, warnings
+
+    locks = as_list(profile.get("ratio_locks"))
+    if profile.get("mode") == "numeric_ratio_lock" and not locks:
+        errors.append("proportion_lock_profile.mode=numeric_ratio_lock requires ratio_locks")
+
+    for index, lock in enumerate(locks, start=1):
+        if not isinstance(lock, dict):
+            errors.append(f"proportion_lock_profile.ratio_locks[{index}] is not an object")
+            continue
+        lock_id = lock.get("id") or f"#{index}"
+        if not lock.get("label"):
+            errors.append(f"{lock_id}: ratio lock needs a human-readable label")
+        low = numeric(lock.get("min"))
+        high = numeric(lock.get("max"))
+        target = numeric(lock.get("target"))
+        if low is None or high is None:
+            errors.append(f"{lock_id}: ratio lock must include numeric min and max")
+        elif low > high:
+            errors.append(f"{lock_id}: min must be <= max")
+        if target is None:
+            warnings.append(f"{lock_id}: ratio lock should include a target value")
+        elif low is not None and high is not None and not (low <= target <= high):
+            errors.append(f"{lock_id}: target must be inside min/max range")
+        if not lock.get("denominator_landmark"):
+            warnings.append(f"{lock_id}: ratio lock should name denominator_landmark for auditability")
+        if not as_list(lock.get("evidence_refs")):
+            warnings.append(f"{lock_id}: ratio lock should reference proportion evidence")
+
+    return errors, warnings
 
 
 def validate_visual_canon(data: dict[str, Any]) -> tuple[list[str], list[str]]:
@@ -93,6 +189,14 @@ def validate_visual_canon(data: dict[str, Any]) -> tuple[list[str], list[str]]:
         source = exact_text_policy.get("text_source") or {}
         if isinstance(source, dict) and source.get("approval_status") not in {"approved", "not_applicable"}:
             errors.append("exact_text_policy.text_required needs an approved text_source or an explicit fallback strategy")
+
+    policy_errors, policy_warnings = validate_interview_policy(data)
+    errors.extend(policy_errors)
+    warnings.extend(policy_warnings)
+
+    ratio_errors, ratio_warnings = validate_proportion_lock_profile(data)
+    errors.extend(ratio_errors)
+    warnings.extend(ratio_warnings)
 
     return errors, warnings
 
@@ -170,6 +274,12 @@ def validate_evaluation_result(data: dict[str, Any]) -> tuple[list[str], list[st
                 "hand_digit_count_pass",
                 "skateboard_proportion_pass",
                 "compact_body_proportion_pass",
+                "numeric_proportion_lock_pass",
+                "full_silhouette_ratio_pass",
+                "head_body_ratio_pass",
+                "torso_width_ratio_pass",
+                "hip_width_ratio_pass",
+                "limb_width_ratio_pass",
                 "arm_length_pass",
                 "leg_length_pass",
                 "limb_proportion_pass",

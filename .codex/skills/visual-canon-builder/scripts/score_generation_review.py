@@ -48,6 +48,18 @@ PROFILE_REQUIRED_CHECKS = {
         "shoe_and_sock_design_pass",
         "source_sheet_style_pass",
     ],
+    "numeric_mascot_identity": [
+        "identity_pass",
+        "style_pass",
+        "proportion_pass",
+        "numeric_proportion_lock_pass",
+        "full_silhouette_ratio_pass",
+        "head_body_ratio_pass",
+        "torso_width_ratio_pass",
+        "hip_width_ratio_pass",
+        "limb_width_ratio_pass",
+        "semantic_pass",
+    ],
 }
 
 REVIEW_MODES = {"pass_only", "visible_shortlist"}

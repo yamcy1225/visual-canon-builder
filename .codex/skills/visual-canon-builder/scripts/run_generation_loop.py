@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROFILE_CHOICES = ["strict_identity", "mascot_skateboard", "compact_mascot_identity"]
+PROFILE_CHOICES = ["strict_identity", "mascot_skateboard", "compact_mascot_identity", "numeric_mascot_identity"]
 
 
 def run_command(template: str, **values: str) -> None:

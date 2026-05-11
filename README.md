@@ -8,9 +8,10 @@ It does not generate images directly. It prepares:
 - image inventory and observed visual facts
 - evidence cards, retrieval traces, guided approval questions, quick approval reviews, and batch approval payloads
 - semantic relations and provenance-backed assertions
-- identity canon, style canon, generation contracts, reference preservation, proportion, and view-projection rules
+- identity canon, style canon, generation contracts, reference preservation, numeric proportion locks, and view-projection rules
 - API execution profiles, source-cell manifests, and exact text/mask policies
 - evaluation loops, drift taxonomy, and targeted next-prompt patches
+- numeric proportion-lock evaluation against candidate measurements
 - validation shapes and checklists
 - safe two-layer `$imagegen` edit/reference prompt packs
 - no-dependency operational scripts and contract fixtures
@@ -31,6 +32,7 @@ It does not generate images directly. It prepares:
 │   ├── apply_approval_payload.py
 │   ├── build_prompt_pack.py
 │   ├── create_source_cell_manifest.py
+│   ├── evaluate_proportion_locks.py
 │   ├── run_generation_loop.py
 │   ├── score_generation_review.py
 │   └── validate_canon.py
@@ -174,6 +176,10 @@ Use $visual-canon-builder to analyze these three character references and identi
 
 ```text
 Use $visual-canon-builder to run an evidence interview on this character sheet before locking the final canon.
+```
+
+```text
+Use $visual-canon-builder in deep_canon mode. Do not stop after four questions; keep asking one canon-critical question at a time until source, silhouette, numeric proportions, face, costume, style, variants, and reject rules are locked.
 ```
 
 For the friendlier review flow:

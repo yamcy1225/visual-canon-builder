@@ -1,4 +1,4 @@
 interface:
   display_name: "Visual Canon Builder"
-  short_description: "Operationalize visual canon for imagegen"
-  default_prompt: "Use $visual-canon-builder to run a guided evidence interview on character notes, worldbuilding, or reference images, ask approval questions one by one, build identity canon, style canon, source-cell manifest, API execution profile, generation contract, and evaluation loop, then turn approved assertions into a two-layer imagegen prompt pack with a technical contract and concise final prompt that prevents visual drift."
+  short_description: "Operationalize deep visual canon for imagegen"
+  default_prompt: "Use $visual-canon-builder to run a guided or deep evidence interview on character notes, worldbuilding, or reference images, ask approval questions one by one without a fixed total cap, build identity canon, numeric proportion locks, style canon, source-cell manifest, API execution profile, generation contract, and evaluation loop, then turn approved assertions into a two-layer imagegen prompt pack with a technical contract and concise final prompt that prevents visual drift."

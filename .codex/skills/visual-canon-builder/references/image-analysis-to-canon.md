@@ -296,6 +296,8 @@ Normalize measurements with either:
 - `height_units: 1000` for imagegen prompt and validation work.
 - `head_units` when the user prefers classic character-sheet ratios.
 
+For drift-prone characters, build a numeric lock instead of relying on adjectives such as "compact", "cute", "slim", or "round". Adjectives can invert under generation: "compact" may become fat, "slim" may become tall, and "round" may spread from face to body. Record target/min/max ratios and explicit reject conditions.
+
 Required fields:
 
 ```yaml
@@ -343,6 +345,22 @@ proportion_model:
   accessory_envelope:
     weapon_width_or_reach: <observed or not_applicable>
     prop_extension: <observed or not_applicable>
+  ratio_lock_profile:
+    mode: numeric_ratio_lock
+    source_cell_id: <source cell or image region>
+    pass_fail_policy: reject_outside_tolerance_for_identity_sensitive_tasks
+    ratio_locks:
+      - id: <stable_ratio_id>
+        label: <human-readable ratio>
+        numerator_landmark: <measured width or height>
+        denominator_landmark: <reference width or height>
+        target: <number>
+        min: <number>
+        max: <number>
+        prompt_phrase: <short imagegen-ready constraint>
+        reject_if: <plain-language failure condition>
+        evidence_refs:
+          - <evidence card id>
 ```
 
 Measurement rules:
@@ -356,6 +374,10 @@ Measurement rules:
 - Use numeric tolerance bands only after calibrated reference-sheet measurements. Without calibration, describe proportions or mark them `low_confidence`.
 - Normalize pixel measurements by cropping to the declared full-height landmarks, scaling to `full_height: 1000`, and rounding to the nearest practical unit such as 5 height units.
 - Set `calibration_status: uncalibrated` and `tolerance_applies: false` unless pixel crop, normalized landmarks, and measurement method are recorded.
+- Use ratio locks only with a declared denominator. Prefer ratios such as `torso_width / face_width`, `full_width / full_height`, `head_plus_ears_height / full_height`, and `shoe_pair_width / face_width`.
+- Store both directions of a fragile semantic correction when needed: for example `above max = too fat` and `below min = too skinny`.
+- If a word has caused drift, demote that word to secondary prose and let the numeric lock control the prompt pack.
+- A generated candidate outside a confirmed identity-critical ratio range is `reject`, not `fix`, unless the user explicitly relaxes the canon.
 
 ## View Projection
 

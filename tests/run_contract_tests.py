@@ -242,6 +242,290 @@ def test_source_cell_manifest_ready_state() -> None:
     assert manifest["source_region"]["bbox"]["width"] == 300
 
 
+def deep_canon_policy_fixture(max_total_questions: int | str = "unbounded") -> dict:
+    return {
+        "entity_type": "Character",
+        "id": "SampleNumericMascotCanon",
+        "interview_policy": {
+            "mode": "deep_canon",
+            "max_active_questions_per_turn": 1,
+            "max_total_questions": max_total_questions,
+            "minimum_passes": [
+                "source_authority",
+                "source_cell_crop",
+                "silhouette",
+                "numeric_proportions",
+                "face_construction",
+                "anatomy_digits",
+                "costume_structure",
+                "style_rendering",
+                "view_projection",
+                "variant_budget",
+                "forbidden_drift",
+                "evaluation_gate",
+            ],
+        },
+        "user_answers": [
+            {
+                "id": "UA_SampleMascot_ProportionLock_001",
+                "answers_question": "Q_SampleMascot_ProportionLock_001",
+                "applies_to": ["ASSERT_SampleMascot_ProportionLock"],
+                "asserted_by": "user",
+                "confidence": "user_confirmed",
+            }
+        ],
+        "canon_assertions": [
+            {
+                "id": "ASSERT_SampleMascot_ProportionLock",
+                "subject": "SampleNumericMascot",
+                "predicate": "hasHeadBodyRatio",
+                "object": "numeric ratio locks approved",
+                "evidence_refs": ["EV_SampleMascot_FrontProportion_001"],
+                "retrieval_scope": "current_conversation_only",
+                "confidence": "user_confirmed",
+                "canon_status": "confirmed",
+                "approval_status": "approved",
+            }
+        ],
+        "proportion_lock_profile": {
+            "mode": "numeric_ratio_lock",
+            "source_cell_id": "CROP_SampleMascot_FrontFullBody_001",
+            "unit_basis": "full_height_1000",
+            "ratio_locks": [
+                {
+                    "id": "torso_width_to_face_width",
+                    "label": "torso center width / face width",
+                    "numerator_landmark": "torso_center_width",
+                    "denominator_landmark": "face_width",
+                    "target": 0.77,
+                    "min": 0.70,
+                    "max": 0.82,
+                    "prompt_phrase": "torso center width stays 0.70-0.82 of face width, target 0.77",
+                    "reject_if": "above max = too wide/fat; below min = too skinny",
+                    "evidence_refs": ["EV_SampleMascot_FrontProportion_001"],
+                }
+            ],
+        },
+        "generation_contract": {
+            "task_sensitivity": "identity_sensitive",
+            "reference_policy": {
+                "identity_anchor": "CROP_SampleMascot_FrontFullBody_001"
+            },
+        },
+    }
+
+
+def numeric_loop_canon_fixture() -> dict:
+    fixture = deep_canon_policy_fixture()
+    fixture["proportion_lock_profile"]["ratio_locks"] = [
+        {
+            "id": "full_silhouette_width_to_height",
+            "label": "full silhouette width / full height",
+            "numerator_landmark": "full_silhouette_width",
+            "denominator_landmark": "full_height",
+            "target": 0.34,
+            "min": 0.31,
+            "max": 0.36,
+            "prompt_phrase": "full silhouette width stays 0.31-0.36 of full height",
+            "reject_if": "below min = too thin/tall; above max = too wide",
+            "evidence_refs": ["EV_SampleMascot_FrontProportion_001"],
+        },
+        {
+            "id": "head_plus_ears_height_to_full_height",
+            "label": "head plus ears height / full height",
+            "numerator_landmark": "head_plus_ears_height",
+            "denominator_landmark": "full_height",
+            "target": 0.50,
+            "min": 0.48,
+            "max": 0.53,
+            "prompt_phrase": "head plus ears occupies 0.48-0.53 of full height",
+            "reject_if": "outside range = head/body ratio changed",
+            "evidence_refs": ["EV_SampleMascot_FrontProportion_001"],
+        },
+        {
+            "id": "torso_width_to_face_width",
+            "label": "torso center width / face width",
+            "numerator_landmark": "torso_center_width",
+            "denominator_landmark": "face_width",
+            "target": 0.77,
+            "min": 0.70,
+            "max": 0.82,
+            "prompt_phrase": "torso center width stays 0.70-0.82 of face width, target 0.77",
+            "reject_if": "above max = too wide/fat; below min = too skinny",
+            "evidence_refs": ["EV_SampleMascot_FrontProportion_001"],
+        },
+        {
+            "id": "hip_width_to_face_width",
+            "label": "hip width / face width",
+            "numerator_landmark": "hip_width",
+            "denominator_landmark": "face_width",
+            "target": 0.78,
+            "min": 0.70,
+            "max": 0.84,
+            "prompt_phrase": "hip width stays 0.70-0.84 of face width",
+            "reject_if": "above max = lower body got too wide",
+            "evidence_refs": ["EV_SampleMascot_FrontProportion_001"],
+        },
+        {
+            "id": "limb_width_to_face_width",
+            "label": "limb width / face width",
+            "numerator_landmark": "limb_width",
+            "denominator_landmark": "face_width",
+            "target": 0.16,
+            "min": 0.13,
+            "max": 0.19,
+            "prompt_phrase": "visible limb width stays 0.13-0.19 of face width",
+            "reject_if": "outside range = limb thickness drift",
+            "evidence_refs": ["EV_SampleMascot_FrontProportion_001"],
+        },
+    ]
+    return fixture
+
+
+def candidate_measurements_fixture(torso_ratio: float = 0.77) -> dict:
+    return {
+        "candidate_measurements": {
+            "source": "test measurement fixture",
+            "ratios": {
+                "full_silhouette_width_to_height": 0.34,
+                "head_plus_ears_height_to_full_height": 0.50,
+                "torso_width_to_face_width": torso_ratio,
+                "hip_width_to_face_width": 0.78,
+                "limb_width_to_face_width": 0.16,
+            },
+            "checks": {
+                "identity_pass": True,
+                "style_pass": True,
+                "semantic_pass": True,
+            },
+        }
+    }
+
+
+def test_deep_canon_policy_accepts_unbounded_questions_and_numeric_locks() -> None:
+    fixture = deep_canon_policy_fixture()
+    payload = json.dumps(fixture, ensure_ascii=False)
+    run(str(SCRIPTS / "validate_canon.py"), "-", "--kind", "visual_canon", input_text=payload)
+    built = run(str(SCRIPTS / "build_prompt_pack.py"), "-", input_text=payload)
+    pack = json.loads(built.stdout)["prompt_pack"]
+    assert pack["technical_contract"]["interview_policy"]["mode"] == "deep_canon"
+    assert pack["technical_contract"]["proportion_lock_profile"]["ratio_locks"][0]["id"] == "torso_width_to_face_width"
+    assert "torso center width stays 0.70-0.82" in pack["final_imagegen_prompt"]
+
+
+def test_deep_canon_policy_rejects_four_question_total_cap() -> None:
+    fixture = deep_canon_policy_fixture(max_total_questions=4)
+    proc = subprocess.run(
+        [
+            PYTHON,
+            str(SCRIPTS / "validate_canon.py"),
+            "-",
+            "--kind",
+            "visual_canon",
+        ],
+        cwd=ROOT,
+        input=json.dumps(fixture, ensure_ascii=False),
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert "short fixed total-question cap" in proc.stdout
+
+
+def test_numeric_proportion_evaluator_accepts_candidate_measurements() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        canon_path = Path(td) / "canon.json"
+        measurements_path = Path(td) / "measurements.json"
+        canon_path.write_text(json.dumps(numeric_loop_canon_fixture(), ensure_ascii=False), encoding="utf-8")
+        measurements_path.write_text(json.dumps(candidate_measurements_fixture(), ensure_ascii=False), encoding="utf-8")
+        evaluated = run(
+            str(SCRIPTS / "evaluate_proportion_locks.py"),
+            "--canon",
+            str(canon_path),
+            "--candidate-measurements",
+            str(measurements_path),
+        )
+    result = json.loads(evaluated.stdout)["evaluation_result"]
+    assert result["classification"] == "pass"
+    assert result["checks"]["numeric_proportion_lock_pass"] is True
+    assert result["checks"]["torso_width_ratio_pass"] is True
+    run(str(SCRIPTS / "validate_canon.py"), "-", "--kind", "evaluation_result", input_text=evaluated.stdout)
+
+
+def test_numeric_proportion_evaluator_rejects_out_of_range_candidate() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        canon_path = Path(td) / "canon.json"
+        measurements_path = Path(td) / "measurements.json"
+        candidate = Path(td) / "candidate.png"
+        canon_path.write_text(json.dumps(numeric_loop_canon_fixture(), ensure_ascii=False), encoding="utf-8")
+        measurements_path.write_text(json.dumps(candidate_measurements_fixture(torso_ratio=0.90), ensure_ascii=False), encoding="utf-8")
+        candidate.write_bytes(b"placeholder")
+        evaluated = run(
+            str(SCRIPTS / "evaluate_proportion_locks.py"),
+            "--canon",
+            str(canon_path),
+            "--candidate-measurements",
+            str(measurements_path),
+        )
+        result = json.loads(evaluated.stdout)["evaluation_result"]
+        assert result["classification"] == "reject"
+        assert result["checks"]["numeric_proportion_lock_pass"] is False
+        assert result["checks"]["torso_width_ratio_pass"] is False
+
+        evaluation_path = Path(td) / "evaluation.json"
+        evaluation_path.write_text(evaluated.stdout, encoding="utf-8")
+        proc = subprocess.run(
+            [
+                PYTHON,
+                str(SCRIPTS / "score_generation_review.py"),
+                str(evaluation_path),
+                "--candidate-image",
+                str(candidate),
+                "--profile",
+                "numeric_mascot_identity",
+            ],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    decision = json.loads(proc.stdout)
+    assert decision["decision"] == "regenerate"
+    assert "numeric_proportion_lock_pass" in decision["failed_checks"]
+    assert "torso_width_ratio_pass" in decision["failed_checks"]
+
+
+def test_generation_loop_accepts_numeric_proportion_candidate() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        workdir = Path(td) / "loop"
+        workdir.mkdir()
+        prompt = Path(td) / "prompt.txt"
+        prompt.write_text("Generate a numeric-locked sample mascot.", encoding="utf-8")
+        (workdir / "seed.png").write_bytes(b"placeholder")
+        (workdir / "canon.json").write_text(json.dumps(numeric_loop_canon_fixture(), ensure_ascii=False), encoding="utf-8")
+        (workdir / "measurements.json").write_text(json.dumps(candidate_measurements_fixture(), ensure_ascii=False), encoding="utf-8")
+
+        proc = run(
+            str(SCRIPTS / "run_generation_loop.py"),
+            "--prompt",
+            str(prompt),
+            "--workdir",
+            str(workdir),
+            "--profile",
+            "numeric_mascot_identity",
+            "--max-attempts",
+            "1",
+            "--generate-command",
+            "cp {workdir}/seed.png {candidate}",
+            "--evaluate-command",
+            f"{PYTHON} .codex/skills/visual-canon-builder/scripts/evaluate_proportion_locks.py --canon {{workdir}}/canon.json --candidate-measurements {{workdir}}/measurements.json --output {{evaluation}}",
+        )
+        assert "\"status\": \"pass\"" in proc.stdout
+        accepted = workdir / "accepted" / "attempt_01.png"
+        assert accepted.exists()
+
 def main() -> int:
     tests = [
         test_reference_preserve_blocks_without_source_cell,
@@ -255,6 +539,11 @@ def main() -> int:
         test_visible_shortlist_keeps_pass_candidate_separately,
         test_visible_shortlist_discards_failed_candidate,
         test_source_cell_manifest_ready_state,
+        test_deep_canon_policy_accepts_unbounded_questions_and_numeric_locks,
+        test_deep_canon_policy_rejects_four_question_total_cap,
+        test_numeric_proportion_evaluator_accepts_candidate_measurements,
+        test_numeric_proportion_evaluator_rejects_out_of_range_candidate,
+        test_generation_loop_accepts_numeric_proportion_candidate,
     ]
     for test in tests:
         test()

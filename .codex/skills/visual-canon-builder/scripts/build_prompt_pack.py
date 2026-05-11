@@ -141,6 +141,36 @@ def compact_constraints(assertions: list[dict[str, Any]]) -> list[str]:
     return [assertion_label(assertion) for assertion in assertions]
 
 
+def proportion_lock_lines(canon: dict[str, Any], limit: int = 8) -> list[str]:
+    profile = canon.get("proportion_lock_profile") or {}
+    if not isinstance(profile, dict):
+        return []
+    lines: list[str] = []
+    for lock in as_list(profile.get("ratio_locks")):
+        if not isinstance(lock, dict):
+            continue
+        label = lock.get("label") or lock.get("id")
+        if not label:
+            continue
+        target = lock.get("target")
+        low = lock.get("min")
+        high = lock.get("max")
+        phrase = lock.get("prompt_phrase")
+        reject = lock.get("reject_if")
+        if phrase:
+            line = str(phrase)
+        elif target is not None and low is not None and high is not None:
+            line = f"{label}: target {target}, pass range {low}-{high}"
+        else:
+            line = str(label)
+        if reject:
+            line += f" (reject if {reject})"
+        lines.append(line)
+        if len(lines) >= limit:
+            break
+    return lines
+
+
 def build_final_prompt(
     canon: dict[str, Any],
     handoff_status: str,
@@ -177,6 +207,9 @@ def build_final_prompt(
         lines.append("Change only: " + ", ".join(str(item) for item in allowed) + ".")
     if invariants:
         lines.extend(str(item) for item in invariants)
+    ratio_lines = proportion_lock_lines(canon)
+    if ratio_lines:
+        lines.append("Numeric proportion locks: " + "; ".join(ratio_lines) + ".")
     if forbidden:
         lines.append("Do not change: " + ", ".join(str(item) for item in forbidden) + ".")
     if confirmed:
@@ -221,6 +254,8 @@ def build_prompt_pack(canon: dict[str, Any]) -> dict[str, Any]:
                 "generation_contract": contract,
                 "reference_preserve_model": canon.get("reference_preserve_model"),
                 "source_cell_asset_manifest": source_manifest or None,
+                "interview_policy": canon.get("interview_policy"),
+                "proportion_lock_profile": canon.get("proportion_lock_profile"),
                 "exact_text_policy": canon.get("exact_text_policy"),
                 "evaluation_contract": canon.get("evaluation_contract"),
             },
@@ -233,6 +268,7 @@ def build_prompt_pack(canon: dict[str, Any]) -> dict[str, Any]:
                 "identity_pass",
                 "style_pass",
                 "proportion_pass",
+                "numeric_proportion_lock_pass",
                 "semantic_pass",
                 "composition_pass",
                 "drift_notes",

@@ -12,6 +12,7 @@ Rules:
 - `retrieval_scope` defaults to `current_conversation_only`.
 - Every candidate assertion must point to one or more `evidence_refs`.
 - Approval can be batched, but the default surface is guided: show one active approval question first, then a compact `user_review` and plain-language reply shortcuts before any YAML payload.
+- Do not cap the total interview at four questions. The default UX asks one active question at a time, but the queue continues until canon-critical identity, source, proportion, text, and style decisions are resolved.
 - Keep one editable `approval_payload` for auditability so strict users can approve, revise, reject, or keep items provisional in one reply.
 - Before approval, candidate assertions are `canon_status: provisional` or `unresolved`, never `confirmed`.
 - Final `confirmed` status requires `approval_status: approved`, at least one `evidence_refs` item, matching `assertion_version`/`value_hash`, and a linked `user_answers` record.
@@ -25,7 +26,12 @@ Use this as the first visible section whenever canon candidates need approval. I
 guided_approval_interview:
   status: awaiting_user_decision
   current_question_index: 1
-  total_questions: 3
+  total_questions: 12
+  interview_policy:
+    mode: deep_canon
+    max_active_questions_per_turn: 1
+    max_total_questions: unbounded
+    stop_condition: canon_critical_queue_resolved_or_user_requests_batch_stop
   current_question:
     id: QAPP_SampleMascot_Identity
     label: "캐릭터 정체성"
@@ -49,11 +55,80 @@ guided_approval_interview:
 
 Rules:
 - Ask exactly one active approval question at a time unless the user explicitly asks for batch approval.
+- `total_questions` may grow as new drift evidence, measurement conflicts, or user corrections appear; do not present it as a hard ceiling.
+- For `deep_canon`, `max_total_questions` must be `unbounded`, `until_resolved`, or a number high enough for the asset complexity. A four-question total cap is invalid.
 - Put this section before `User Review`, tables, ontology, and prompt packs.
 - The question must name the visual decision in natural language, not only an assertion ID.
 - The response may still include provisional ontology and `$imagegen` prompt pack below, but it should end with the same current question reminder.
 - When the user answers, create `user_answers`, update assertion approval state, recompute `lock_summary`, and ask the next unresolved approval question.
-- If the user says `추천대로 진행`, apply all recommended actions and skip remaining low-risk interview questions.
+- If the user says `추천대로 진행`, apply all recommended low-risk actions. Keep high-risk identity, numeric-proportion, exact-text, source-cell, and left/right questions queued unless the user explicitly approves all of them.
+
+## Deep Canon Interview
+
+Use this mode for fragile recurring characters, production mascots, exact source-cell preservation, or after generated images drift. The aim is not to ask more for its own sake; it is to separate every visual decision that can cause imagegen drift.
+
+Minimum pass structure:
+
+| Pass | Decision Type | Typical Question |
+| --- | --- | --- |
+| 1 | Source authority | "Which image/cell is the canon anchor?" |
+| 2 | Source-cell crop | "Which exact view/crop owns proportion lock?" |
+| 3 | Silhouette | "Is the overall envelope slim, compact, wide, tall, etc.?" |
+| 4 | Numeric proportions | "Approve these target/min/max ratios?" |
+| 5 | Face construction | "Which eye, pupil, cheek, nose, mouth details are immutable?" |
+| 6 | Anatomy/digits | "How many fingers/toes; which simplifications are allowed?" |
+| 7 | Costume structure | "Which garments are fixed; which text/color slots vary?" |
+| 8 | Style/rendering | "Line weight, shading, palette, texture, and detail density?" |
+| 9 | View projection | "How should side/back/3-4 views preserve depth and widths?" |
+| 10 | Variant budget | "Which pose/expression/scene changes are allowed?" |
+| 11 | Forbidden drift | "What previous failures must become reject rules?" |
+| 12 | Evaluation gate | "Which checks must pass before candidates are shown?" |
+
+Represent the policy explicitly:
+
+```yaml
+interview_policy:
+  mode: deep_canon
+  max_active_questions_per_turn: 1
+  max_total_questions: unbounded
+  minimum_passes:
+    - source_authority
+    - source_cell_crop
+    - silhouette
+    - numeric_proportions
+    - face_construction
+    - anatomy_digits
+    - costume_structure
+    - style_rendering
+    - view_projection
+    - variant_budget
+    - forbidden_drift
+    - evaluation_gate
+  high_risk_questions_cannot_be_auto_skipped:
+    - source_cell_crop
+    - numeric_proportions
+    - exact_text
+    - left_right_asymmetry
+    - identity_critical_shape
+```
+
+When the user says a generated candidate is "too fat", "too thin", "too tall", or similar, do not keep only the adjective. Convert it into a measurable lock:
+
+```yaml
+proportion_lock_profile:
+  mode: numeric_ratio_lock
+  source_cell_id: CROP_or_Image_region
+  unit_basis: full_height_1000
+  ratio_locks:
+    - id: torso_width_to_face_width
+      label: torso center width / face width
+      target: 0.77
+      min: 0.70
+      max: 0.82
+      reject_if: above max = too wide/fat; below min = too skinny
+      evidence_refs:
+        - EV_Proportion_Front_001
+```
 
 ## User Review First
 
